@@ -31,6 +31,12 @@ class Node:
     def is_task(self) -> bool:
         return self.type == BPMNNodeType.TASK
 
+    def is_start_event(self) -> bool:
+        return self.type == BPMNNodeType.START_EVENT
+
+    def is_end_event(self) -> bool:
+        return self.type == BPMNNodeType.END_EVENT
+
     def is_event(self) -> bool:
         return self.type in [
             BPMNNodeType.START_EVENT,
@@ -55,6 +61,7 @@ class Flow:
 
 
 class BPMNModel:
+
     def __init__(self):
         self.nodes: Set[Node] = set()
         self.id_to_node: Dict[str, Node] = dict()
@@ -76,6 +83,8 @@ class BPMNModel:
                 self.id_to_node[event_id] = node
 
     def add_gateway(self, gateway_type: BPMNNodeType, gateway_id: str, gateway_name: str):
+        if gateway_type is BPMNNodeType.INCLUSIVE_GATEWAY:
+            raise AttributeError("Current implementation does not support Inclusive Gateways!")
         if gateway_id not in self.id_to_node:
             node = Node(gateway_type, gateway_id, gateway_name)
             if node.is_gateway():
@@ -84,18 +93,60 @@ class BPMNModel:
 
     def add_flow(self, flow_id: str, flow_name: str, source_id: str, target_id: str):
         if flow_id not in self.id_to_flow:
-            flow = Flow(flow_id, flow_name, source_id, target_id)
-            self.flows |= {flow}
             source = self.id_to_node[source_id]
             target = self.id_to_node[target_id]
+            # Check correctness
+            if (source.is_task() or source.is_event()) and len(source.outgoing_flows) > 0:
+                raise RuntimeError(
+                    f"Error when adding flow (id: {flow_id}). Tasks and events must have one single outgoing flow arc."
+                )
+            if target.is_start_event():
+                raise RuntimeError(
+                    f"Error when adding flow (id: {flow_id}). Start events cannot have incoming flow arcs."
+                )
+            if source.is_end_event():
+                raise RuntimeError(
+                    f"Error when adding flow (id: {flow_id}). End events cannot have outgoing flow arcs."
+                )
+            # Add flow to model
+            flow = Flow(flow_id, flow_name, source_id, target_id)
+            self.flows |= {flow}
             source.outgoing_flows |= {flow_id}
             target.incoming_flows |= {flow_id}
 
-    def execute(self, node_id: str) -> List[Set[str]]:
+    def initialize_marking(self):
+        """
+        Set initial marking, which corresponds to the execution of the start events of the process model.
+        """
+        self.marking = dict()
+        start_nodes = [node for node in self.nodes if node.is_start_event()]
+        for node in start_nodes:
+            self.marking |= node.outgoing_flows  # It always has only one outgoing flow (at most)
+
+    def simulate_execution(self, node_id: str) -> List[Set[str]]:
+        """
+        Simulate the execution of [node_id], if possible, given the current marking, and return the possible markings
+        result of such execution.
+
+        :param node_id: Identifier of the node to execute.
+        :return: when it is possible to execute [node_id], list with the different markings result of such execution,
+        otherwise, return empty list.
+        """
         node = self.id_to_node[node_id]
-        if node.is_task() or node.is_event() or node.type is BPMNNodeType.EXCLUSIVE_GATEWAY:
-            # Task/Event/ExclusiveGateway: consume one incoming flow and enable one outgoing flow
+        if node.is_task() or node.is_event():
+            # Task/Event: consume active incoming flow and enable the outgoing flow
             active_incoming_flows = node.incoming_flows & self.marking
+            if len(active_incoming_flows) > 1:
+                print(f"Warning! Node '{node_id}' has more than one incoming flow enabled (consuming only one).")
+            if len(active_incoming_flows) > 0:
+                consumed_flow = active_incoming_flows.pop()
+                new_marking = self.marking - {consumed_flow}
+                return [new_marking | {node.outgoing_flows}]
+        elif node.type is BPMNNodeType.EXCLUSIVE_GATEWAY:
+            # Exclusive gateway: consume active incoming flow and enable one of the outgoing flows
+            active_incoming_flows = node.incoming_flows & self.marking
+            if len(active_incoming_flows) > 1:
+                print(f"Warning! ExclGateway '{node_id}' has more than one incoming flow enabled (consuming only one).")
             if len(active_incoming_flows) > 0:
                 consumed_flow = active_incoming_flows.pop()
                 new_marking = self.marking - {consumed_flow}
@@ -115,16 +166,14 @@ class BPMNModel:
                     for outgoing_flows in _powerset(node.outgoing_flows)
                     if len(outgoing_flows) > 0
                 ]
-            pass
-        else:
-            # Unknown element
-            return []
+        # Unknown element or unable to execute
+        return []
 
     def get_enabled_nodes(self) -> Set[Node]:
         return {
             node.id
             for node in self.nodes
-            if node.incoming_flows.issubset(self.marking)
+            if node.incoming_flows.issubset(self.marking) and not node.is_start_event() and not node.is_end_event()
         }
 
 
