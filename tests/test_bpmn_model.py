@@ -49,7 +49,7 @@ def test_create_bpmn_model():
     assert len(bpmn_model.id_to_node["24"].outgoing_flows) == 0
 
 
-def test_simulate_execution():
+def test_simulate_execution_and_enabled_nodes():
     bpmn_model = _bpmn_model_with_and_and_xor()
     # Initialize marking
     bpmn_model.initialize_marking()
@@ -58,20 +58,29 @@ def test_simulate_execution():
     bpmn_model.marking = bpmn_model.simulate_execution("2")[0]
     bpmn_model.marking = bpmn_model.simulate_execution("4")[0]
     assert bpmn_model.marking == {"5", "6"}
+    assert bpmn_model.get_enabled_nodes() == {"7", "8"}
     bpmn_model.marking = bpmn_model.simulate_execution("7")[0]
     bpmn_model.marking = bpmn_model.simulate_execution("8")[0]
     bpmn_model.marking = bpmn_model.simulate_execution("11")[0]
     assert bpmn_model.marking == {"12"}
+    assert bpmn_model.get_enabled_nodes() == {"13"}
     (marking_one, marking_two) = bpmn_model.simulate_execution("13")
     bpmn_model.marking = marking_one
-    bpmn_model.marking = bpmn_model.simulate_execution("16")[0]
+    if "16" in bpmn_model.get_enabled_nodes():
+        bpmn_model.marking = bpmn_model.simulate_execution("16")[0]
+    else:
+        bpmn_model.marking = bpmn_model.simulate_execution("17")[0]
     marking_one = bpmn_model.simulate_execution("20")[0]
     bpmn_model.marking = marking_two
-    bpmn_model.marking = bpmn_model.simulate_execution("17")[0]
+    if "17" in bpmn_model.get_enabled_nodes():
+        bpmn_model.marking = bpmn_model.simulate_execution("17")[0]
+    else:
+        bpmn_model.marking = bpmn_model.simulate_execution("16")[0]
     marking_two = bpmn_model.simulate_execution("20")[0]
     assert marking_one == {"21"}
     assert marking_one == marking_two
     bpmn_model.marking = marking_one
+    assert bpmn_model.get_enabled_nodes() == {"22"}
     bpmn_model.marking = bpmn_model.simulate_execution("22")[0]
     assert bpmn_model.marking == {"23"}
     bpmn_model.marking = bpmn_model.simulate_execution("24")[0]
