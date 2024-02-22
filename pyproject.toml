@@ -1,10 +1,10 @@
 [tool.poetry]
 name = "process-running-state"
 version = "0.1.0"
-description = ""
+description = "Compute the running state (marking) of a trace."
 authors = ["David Chapela de la Campa <david.chapela.delacampa@gmail.com>"]
 readme = "README.md"
-packages = [{ include = "process_running_state" }]
+packages = [{ include = "src/process_running_state" }]
 
 [tool.poetry.dependencies]
 python = "^3.9"
