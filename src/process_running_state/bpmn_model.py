@@ -118,7 +118,7 @@ class BPMNModel:
         """
         Set initial marking, which corresponds to the execution of the start events of the process model.
         """
-        self.marking = dict()
+        self.marking = set()
         start_nodes = [node for node in self.nodes if node.is_start_event()]
         for node in start_nodes:
             self.marking |= node.outgoing_flows  # It always has only one outgoing flow (at most)
@@ -141,7 +141,7 @@ class BPMNModel:
             if len(active_incoming_flows) > 0:
                 consumed_flow = active_incoming_flows.pop()
                 new_marking = self.marking - {consumed_flow}
-                return [new_marking | {node.outgoing_flows}]
+                return [new_marking | node.outgoing_flows]
         elif node.type is BPMNNodeType.EXCLUSIVE_GATEWAY:
             # Exclusive gateway: consume active incoming flow and enable one of the outgoing flows
             active_incoming_flows = node.incoming_flows & self.marking

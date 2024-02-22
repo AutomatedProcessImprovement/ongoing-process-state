@@ -1,7 +1,7 @@
 from process_running_state.bpmn_model import BPMNModel, BPMNNodeType
 
-if __name__ == '__main__':
-    # Example usage
+
+def _bpmn_model_with_and_and_xor() -> BPMNModel:
     bpmn_model = BPMNModel()
     bpmn_model.add_event(BPMNNodeType.START_EVENT, "0", "Start")
     bpmn_model.add_event(BPMNNodeType.END_EVENT, "24", "End")
@@ -28,23 +28,51 @@ if __name__ == '__main__':
     bpmn_model.add_flow("19", "flow", "17", "20")
     bpmn_model.add_flow("21", "flow", "20", "22")
     bpmn_model.add_flow("23", "flow", "22", "24")
+    return bpmn_model
 
-    bpmn_model.marking = {"1"}
-    bpmn_model.marking = bpmn_model.execute("2")[0]
-    bpmn_model.marking = bpmn_model.execute("4")[0]
-    bpmn_model.marking = bpmn_model.execute("7")[0]
-    bpmn_model.marking = bpmn_model.execute("8")[0]
-    bpmn_model.marking = bpmn_model.execute("11")[0]
-    (marking_one, marking_two) = bpmn_model.execute("13")
+
+def test_create_bpmn_model():
+    bpmn_model = _bpmn_model_with_and_and_xor()
+    # Assert general characteristics
+    assert len(bpmn_model.nodes) == 12
+    assert len(bpmn_model.flows) == 13
+    assert sum([len(node.incoming_flows) for node in bpmn_model.nodes]) == 13
+    assert sum([len(node.outgoing_flows) for node in bpmn_model.nodes]) == 13
+    # Assert some nodes have the expected incoming and outgoing arcs
+    assert bpmn_model.id_to_node["4"].incoming_flows == {"3"}
+    assert bpmn_model.id_to_node["4"].outgoing_flows == {"5", "6"}
+    assert bpmn_model.id_to_node["16"].incoming_flows == {"14"}
+    assert bpmn_model.id_to_node["16"].outgoing_flows == {"18"}
+    assert bpmn_model.id_to_node["20"].incoming_flows == {"18", "19"}
+    assert bpmn_model.id_to_node["20"].outgoing_flows == {"21"}
+    assert bpmn_model.id_to_node["24"].incoming_flows == {"23"}
+    assert len(bpmn_model.id_to_node["24"].outgoing_flows) == 0
+
+
+def test_simulate_execution():
+    bpmn_model = _bpmn_model_with_and_and_xor()
+    # Initialize marking
+    bpmn_model.initialize_marking()
+    assert bpmn_model.marking == {"1"}
+    # Simulate execution
+    bpmn_model.marking = bpmn_model.simulate_execution("2")[0]
+    bpmn_model.marking = bpmn_model.simulate_execution("4")[0]
+    assert bpmn_model.marking == {"5", "6"}
+    bpmn_model.marking = bpmn_model.simulate_execution("7")[0]
+    bpmn_model.marking = bpmn_model.simulate_execution("8")[0]
+    bpmn_model.marking = bpmn_model.simulate_execution("11")[0]
+    assert bpmn_model.marking == {"12"}
+    (marking_one, marking_two) = bpmn_model.simulate_execution("13")
     bpmn_model.marking = marking_one
-    bpmn_model.marking = bpmn_model.execute("16")[0]
-    marking_one = bpmn_model.execute("20")[0]
+    bpmn_model.marking = bpmn_model.simulate_execution("16")[0]
+    marking_one = bpmn_model.simulate_execution("20")[0]
     bpmn_model.marking = marking_two
-    bpmn_model.marking = bpmn_model.execute("17")[0]
-    marking_two = bpmn_model.execute("20")[0]
+    bpmn_model.marking = bpmn_model.simulate_execution("17")[0]
+    marking_two = bpmn_model.simulate_execution("20")[0]
+    assert marking_one == {"21"}
     assert marking_one == marking_two
     bpmn_model.marking = marking_one
-    bpmn_model.marking = bpmn_model.execute("22")[0]
+    bpmn_model.marking = bpmn_model.simulate_execution("22")[0]
     assert bpmn_model.marking == {"23"}
-    print()
-
+    bpmn_model.marking = bpmn_model.simulate_execution("24")[0]
+    assert len(bpmn_model.marking) == 0
