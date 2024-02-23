@@ -20,9 +20,15 @@ class ReachabilityGraph:
         edge_id = len(self.edges)
         source_id = self.marking_to_key[tuple(sorted(source_marking))]
         target_id = self.marking_to_key[tuple(sorted(target_marking))]
-        # Update graph elements
-        self.edges[edge_id] = (source_id, target_id)
-        self.activity_to_edges[activity] = self.activity_to_edges.get(activity, set()) | {edge_id}
-        self.edge_to_activity[edge_id] = activity
-        self.incoming_edges[target_id] = self.incoming_edges.get(target_id, set()) | {edge_id}
-        self.outgoing_edges[source_id] = self.outgoing_edges.get(source_id, set()) | {edge_id}
+        # Check if edge already in the graph
+        existent_edges = [
+            self.edges[existent_edge_id]
+            for existent_edge_id in self.activity_to_edges.get(activity, set())
+        ]
+        if (source_id, target_id) not in existent_edges:
+            # Update graph elements
+            self.edges[edge_id] = (source_id, target_id)
+            self.activity_to_edges[activity] = self.activity_to_edges.get(activity, set()) | {edge_id}
+            self.edge_to_activity[edge_id] = activity
+            self.incoming_edges[target_id] = self.incoming_edges.get(target_id, set()) | {edge_id}
+            self.outgoing_edges[source_id] = self.outgoing_edges.get(source_id, set()) | {edge_id}
