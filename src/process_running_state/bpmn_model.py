@@ -174,8 +174,50 @@ class BPMNModel:
         return {
             node.id
             for node in self.nodes
-            if node.incoming_flows.issubset(marking) and not node.is_start_event() and not node.is_end_event()
+            if (not node.is_start_event() and not node.is_end_event()) and (
+                    (node.type == BPMNNodeType.PARALLEL_GATEWAY and node.incoming_flows.issubset(marking)) or
+                    (node.type != BPMNNodeType.PARALLEL_GATEWAY and len(node.incoming_flows & marking) > 0)
+            )
         }
+
+    def advance_marking(self, marking: Set[str]) -> List[Set[str]]:
+        """
+        Advance the current marking as much as possible without executing any task, i.e., execute gateways and events
+        until there are none enabled.
+
+        :param marking: marking over which to compute the enabled nodes.
+        :return: list with the different markings result of such execution.
+        """
+        # Initialize breath-first search list
+        current_markings = [marking]
+        explored_markings = set()
+        final_markings = []
+        # Run propagation until no more gateways can be fired
+        while current_markings:
+            next_markings = []
+            # For each marking
+            for current_marking in current_markings:
+                # If it hasn't been explored
+                marking_key = tuple(sorted(current_marking))
+                if marking_key not in explored_markings:
+                    # Add it to explored
+                    explored_markings.add(marking_key)
+                    # Get enabled gateways
+                    enabled_gateways = [
+                        node_id
+                        for node_id in self.get_enabled_nodes(current_marking) if
+                        self.id_to_node[node_id].is_gateway()
+                    ]
+                    # If no enabled gateways, save fully advanced marking
+                    if len(enabled_gateways) == 0:
+                        final_markings += [current_marking]
+                    else:
+                        # Otherwise, execute one of the enabled gateways and save result for next iteration
+                        next_markings += self.simulate_execution(enabled_gateways[0], current_marking)
+            # Update new marking stack
+            current_markings = next_markings
+        # Return final set
+        return final_markings
 
 
 def _powerset(iterable):
