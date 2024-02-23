@@ -1,7 +1,7 @@
 class ReachabilityGraph:
     def __init__(self):
         self.edges = {}  # Dict with edge ID as key, and tuple source-target marking IDs as value
-        self.activity_to_edges = {}  # Dict with activity label as key, and list of edges as value
+        self.activity_to_edges = {}  # Dict with activity label as key, and list of edge IDs as value
         self.edge_to_activity = {}  # Dict with edge ID as key, and activity label as value
         self.markings = {}  # Dict with ID as key, and set of place IDs (marking) as value
         self.marking_to_key = {}  # Dict with marking (sorted tuple) as key, and ID as value

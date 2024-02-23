@@ -167,3 +167,26 @@ def test_advance_marking_complex_model():
     # Advance from state where the three XOR-join are enabled: it should execute the XOR-join and AND-join
     markings = bpmn_model.advance_marking({"23", "26", "28"})
     assert markings == [{"36"}]
+
+
+def test_reachability_graph():
+    bpmn_model = _bpmn_model_with_AND_and_XOR()
+    reachability_graph = bpmn_model.get_reachability_graph()
+    # Assert general sizes
+    assert len(reachability_graph.markings) == 8
+    assert len(reachability_graph.edges) == 10
+    # Assert size of edges per activity
+    assert len(reachability_graph.activity_to_edges["A"]) == 1
+    assert len(reachability_graph.activity_to_edges["B"]) == 3
+    assert len(reachability_graph.activity_to_edges["C"]) == 3
+    assert len(reachability_graph.activity_to_edges["D"]) == 1
+    assert len(reachability_graph.activity_to_edges["E"]) == 1
+    assert len(reachability_graph.activity_to_edges["F"]) == 1
+    # Assert specific edges
+    edges = {reachability_graph.edges[edge_id] for edge_id in reachability_graph.activity_to_edges["B"]}
+    assert (reachability_graph.marking_to_key[tuple(sorted({"5", "6"}))],
+            reachability_graph.marking_to_key[tuple(sorted({"6", "9"}))]) in edges
+    assert (reachability_graph.marking_to_key[tuple(sorted({"5", "10"}))],
+            reachability_graph.marking_to_key[tuple(sorted({"14"}))]) in edges
+    assert (reachability_graph.marking_to_key[tuple(sorted({"5", "10"}))],
+            reachability_graph.marking_to_key[tuple(sorted({"15"}))]) in edges

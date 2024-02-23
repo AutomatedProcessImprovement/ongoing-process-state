@@ -2,6 +2,8 @@ from enum import Enum
 from itertools import combinations
 from typing import List, Set, Dict
 
+from process_running_state.reachability_graph import ReachabilityGraph
+
 
 class BPMNNodeType(Enum):
     TASK = "TASK"
@@ -218,6 +220,39 @@ class BPMNModel:
             current_markings = next_markings
         # Return final set
         return final_markings
+
+    def get_reachability_graph(self) -> ReachabilityGraph:
+        graph = ReachabilityGraph()
+        initial_marking = self.get_initial_marking()
+        graph.add_marking(initial_marking)
+        marking_stack = [initial_marking]
+        explored_markings = set()
+
+        while marking_stack:
+            # Retrieve current marking
+            current_marking = marking_stack.pop()
+            marking_key = tuple(sorted(current_marking))
+            # If it hasn't been explored
+            if marking_key not in explored_markings:
+                # Add it to explored
+                explored_markings.add(marking_key)
+                # Fire all enabled nodes and save new markings
+                for enabled_node_id in self.get_enabled_nodes(current_marking):
+                    enabled_node = self.id_to_node[enabled_node_id]
+                    if enabled_node.is_task() or enabled_node.is_event():
+                        # Fire task/event (always returns 1 marking)
+                        [new_marking] = self.simulate_execution(enabled_node_id, current_marking)
+                        # Advance the marking as much as possible (executing enabled gateways)
+                        new_markings = self.advance_marking(new_marking)
+                        # Update reachability graph
+                        for new_marking in new_markings:
+                            graph.add_marking(new_marking)
+                            graph.add_edge(enabled_node.name, current_marking, new_marking)
+                            # Save new marking if not explored
+                            if new_marking not in explored_markings:
+                                marking_stack.append(new_marking)
+        # Return reachability graph
+        return graph
 
 
 def _powerset(iterable):
