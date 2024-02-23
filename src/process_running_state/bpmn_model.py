@@ -67,7 +67,6 @@ class BPMNModel:
         self.id_to_node: Dict[str, Node] = dict()
         self.flows: Set[Flow] = set()
         self.id_to_flow: Dict[str, Node] = dict()
-        self.marking: Set[str] = set()
 
     def add_task(self, task_id: str, task_name: str):
         if task_id not in self.id_to_node:
@@ -114,53 +113,55 @@ class BPMNModel:
             source.outgoing_flows |= {flow_id}
             target.incoming_flows |= {flow_id}
 
-    def initialize_marking(self):
+    def get_initial_marking(self):
         """
-        Set initial marking, which corresponds to the execution of the start events of the process model.
+        Get initial marking, which corresponds to the execution of the start events of the process model.
         """
-        self.marking = set()
+        initial_marking = set()
         start_nodes = [node for node in self.nodes if node.is_start_event()]
         for node in start_nodes:
-            self.marking |= node.outgoing_flows  # It always has only one outgoing flow (at most)
+            initial_marking |= node.outgoing_flows  # It always has only one outgoing flow (at most)
+        return initial_marking
 
-    def simulate_execution(self, node_id: str) -> List[Set[str]]:
+    def simulate_execution(self, node_id: str, marking: Set[str]) -> List[Set[str]]:
         """
-        Simulate the execution of [node_id], if possible, given the current marking, and return the possible markings
+        Simulate the execution of [node_id], if possible, given the current [marking], and return the possible markings
         result of such execution.
 
         :param node_id: Identifier of the node to execute.
+        :param marking: Current marking to simulate the execution over it.
         :return: when it is possible to execute [node_id], list with the different markings result of such execution,
         otherwise, return empty list.
         """
         node = self.id_to_node[node_id]
         if node.is_task() or node.is_event():
             # Task/Event: consume active incoming flow and enable the outgoing flow
-            active_incoming_flows = node.incoming_flows & self.marking
+            active_incoming_flows = node.incoming_flows & marking
             if len(active_incoming_flows) > 1:
                 print(f"Warning! Node '{node_id}' has more than one incoming flow enabled (consuming only one).")
             if len(active_incoming_flows) > 0:
                 consumed_flow = active_incoming_flows.pop()
-                new_marking = self.marking - {consumed_flow}
+                new_marking = marking - {consumed_flow}
                 return [new_marking | node.outgoing_flows]
         elif node.type is BPMNNodeType.EXCLUSIVE_GATEWAY:
             # Exclusive gateway: consume active incoming flow and enable one of the outgoing flows
-            active_incoming_flows = node.incoming_flows & self.marking
+            active_incoming_flows = node.incoming_flows & marking
             if len(active_incoming_flows) > 1:
                 print(f"Warning! ExclGateway '{node_id}' has more than one incoming flow enabled (consuming only one).")
             if len(active_incoming_flows) > 0:
                 consumed_flow = active_incoming_flows.pop()
-                new_marking = self.marking - {consumed_flow}
+                new_marking = marking - {consumed_flow}
                 return [new_marking | {outgoing_flow} for outgoing_flow in node.outgoing_flows]
         elif node.type is BPMNNodeType.PARALLEL_GATEWAY:
             # Parallel gateway: consume all incoming and enable all outgoing
-            if node.incoming_flows.issubset(self.marking):
-                new_marking = self.marking - node.incoming_flows | node.outgoing_flows
+            if node.incoming_flows.issubset(marking):
+                new_marking = marking - node.incoming_flows | node.outgoing_flows
                 return [new_marking]
         elif node.type is BPMNNodeType.INCLUSIVE_GATEWAY:
             # Inclusive gateway: consume all active incoming edges and enable all combinations of outgoing
-            active_incoming_flows = node.incoming_flows & self.marking
+            active_incoming_flows = node.incoming_flows & marking
             if len(active_incoming_flows) > 0:
-                new_marking = self.marking - active_incoming_flows
+                new_marking = marking - active_incoming_flows
                 return [
                     new_marking | outgoing_flows
                     for outgoing_flows in _powerset(node.outgoing_flows)
@@ -169,11 +170,11 @@ class BPMNModel:
         # Unknown element or unable to execute
         return []
 
-    def get_enabled_nodes(self) -> Set[Node]:
+    def get_enabled_nodes(self, marking: Set[str]) -> Set[str]:
         return {
             node.id
             for node in self.nodes
-            if node.incoming_flows.issubset(self.marking) and not node.is_start_event() and not node.is_end_event()
+            if node.incoming_flows.issubset(marking) and not node.is_start_event() and not node.is_end_event()
         }
 
 

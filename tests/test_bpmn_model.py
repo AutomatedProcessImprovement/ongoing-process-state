@@ -52,36 +52,34 @@ def test_create_bpmn_model():
 def test_simulate_execution_and_enabled_nodes():
     bpmn_model = _bpmn_model_with_and_and_xor()
     # Initialize marking
-    bpmn_model.initialize_marking()
-    assert bpmn_model.marking == {"1"}
+    marking = bpmn_model.get_initial_marking()
+    assert marking == {"1"}
     # Simulate execution
-    bpmn_model.marking = bpmn_model.simulate_execution("2")[0]
-    bpmn_model.marking = bpmn_model.simulate_execution("4")[0]
-    assert bpmn_model.marking == {"5", "6"}
-    assert bpmn_model.get_enabled_nodes() == {"7", "8"}
-    bpmn_model.marking = bpmn_model.simulate_execution("7")[0]
-    bpmn_model.marking = bpmn_model.simulate_execution("8")[0]
-    bpmn_model.marking = bpmn_model.simulate_execution("11")[0]
-    assert bpmn_model.marking == {"12"}
-    assert bpmn_model.get_enabled_nodes() == {"13"}
-    (marking_one, marking_two) = bpmn_model.simulate_execution("13")
-    bpmn_model.marking = marking_one
-    if "16" in bpmn_model.get_enabled_nodes():
-        bpmn_model.marking = bpmn_model.simulate_execution("16")[0]
+    marking = bpmn_model.simulate_execution("2", marking)[0]
+    marking = bpmn_model.simulate_execution("4", marking)[0]
+    assert marking == {"5", "6"}
+    assert bpmn_model.get_enabled_nodes(marking) == {"7", "8"}
+    marking = bpmn_model.simulate_execution("7", marking)[0]
+    marking = bpmn_model.simulate_execution("8", marking)[0]
+    marking = bpmn_model.simulate_execution("11", marking)[0]
+    assert marking == {"12"}
+    assert bpmn_model.get_enabled_nodes(marking) == {"13"}
+    (marking_one, marking_two) = bpmn_model.simulate_execution("13", marking)
+    if "16" in bpmn_model.get_enabled_nodes(marking_one):
+        marking_one = bpmn_model.simulate_execution("16", marking_one)[0]
     else:
-        bpmn_model.marking = bpmn_model.simulate_execution("17")[0]
-    marking_one = bpmn_model.simulate_execution("20")[0]
-    bpmn_model.marking = marking_two
-    if "17" in bpmn_model.get_enabled_nodes():
-        bpmn_model.marking = bpmn_model.simulate_execution("17")[0]
+        marking_one = bpmn_model.simulate_execution("17", marking_one)[0]
+    marking_one = bpmn_model.simulate_execution("20", marking_one)[0]
+    if "17" in bpmn_model.get_enabled_nodes(marking_two):
+        marking_two = bpmn_model.simulate_execution("17", marking_two)[0]
     else:
-        bpmn_model.marking = bpmn_model.simulate_execution("16")[0]
-    marking_two = bpmn_model.simulate_execution("20")[0]
+        marking_two = bpmn_model.simulate_execution("16", marking_two)[0]
+    marking_two = bpmn_model.simulate_execution("20", marking_two)[0]
     assert marking_one == {"21"}
     assert marking_one == marking_two
-    bpmn_model.marking = marking_one
-    assert bpmn_model.get_enabled_nodes() == {"22"}
-    bpmn_model.marking = bpmn_model.simulate_execution("22")[0]
-    assert bpmn_model.marking == {"23"}
-    bpmn_model.marking = bpmn_model.simulate_execution("24")[0]
-    assert len(bpmn_model.marking) == 0
+    marking = marking_one
+    assert bpmn_model.get_enabled_nodes(marking) == {"22"}
+    marking = bpmn_model.simulate_execution("22", marking)[0]
+    assert marking == {"23"}
+    marking = bpmn_model.simulate_execution("24", marking)[0]
+    assert len(marking) == 0
