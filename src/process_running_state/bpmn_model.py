@@ -33,12 +33,6 @@ class Node:
     def is_task(self) -> bool:
         return self.type == BPMNNodeType.TASK
 
-    def is_start_event(self) -> bool:
-        return self.type == BPMNNodeType.START_EVENT
-
-    def is_end_event(self) -> bool:
-        return self.type == BPMNNodeType.END_EVENT
-
     def is_event(self) -> bool:
         return self.type in [
             BPMNNodeType.START_EVENT,
@@ -46,12 +40,30 @@ class Node:
             BPMNNodeType.END_EVENT,
         ]
 
+    def is_start_event(self) -> bool:
+        return self.type == BPMNNodeType.START_EVENT
+
+    def is_intermediate_event(self) -> bool:
+        return self.type == BPMNNodeType.INTERMEDIATE_EVENT
+
+    def is_end_event(self) -> bool:
+        return self.type == BPMNNodeType.END_EVENT
+
     def is_gateway(self) -> bool:
         return self.type in [
             BPMNNodeType.EXCLUSIVE_GATEWAY,
             BPMNNodeType.PARALLEL_GATEWAY,
             BPMNNodeType.INCLUSIVE_GATEWAY,
         ]
+
+    def is_AND(self) -> bool:
+        return self.type == BPMNNodeType.PARALLEL_GATEWAY
+
+    def is_OR(self) -> bool:
+        return self.type == BPMNNodeType.INCLUSIVE_GATEWAY
+
+    def is_XOR(self) -> bool:
+        return self.type == BPMNNodeType.EXCLUSIVE_GATEWAY
 
 
 class Flow:
@@ -115,9 +127,11 @@ class BPMNModel:
             source.outgoing_flows |= {flow_id}
             target.incoming_flows |= {flow_id}
 
-    def get_initial_marking(self):
+    def get_initial_marking(self) -> Set[str]:
         """
         Get initial marking, which corresponds to the execution of the start events of the process model.
+
+        :return: marking (set of flows) corresponding to the initial marking of this BPMN model.
         """
         initial_marking = set()
         start_nodes = [node for node in self.nodes if node.is_start_event()]
@@ -145,7 +159,7 @@ class BPMNModel:
                 consumed_flow = active_incoming_flows.pop()
                 new_marking = marking - {consumed_flow}
                 return [new_marking | node.outgoing_flows]
-        elif node.type is BPMNNodeType.EXCLUSIVE_GATEWAY:
+        elif node.is_XOR():
             # Exclusive gateway: consume active incoming flow and enable one of the outgoing flows
             active_incoming_flows = node.incoming_flows & marking
             if len(active_incoming_flows) > 1:
@@ -154,12 +168,12 @@ class BPMNModel:
                 consumed_flow = active_incoming_flows.pop()
                 new_marking = marking - {consumed_flow}
                 return [new_marking | {outgoing_flow} for outgoing_flow in node.outgoing_flows]
-        elif node.type is BPMNNodeType.PARALLEL_GATEWAY:
+        elif node.is_AND():
             # Parallel gateway: consume all incoming and enable all outgoing
             if node.incoming_flows.issubset(marking):
                 new_marking = marking - node.incoming_flows | node.outgoing_flows
                 return [new_marking]
-        elif node.type is BPMNNodeType.INCLUSIVE_GATEWAY:
+        elif node.is_OR():
             # Inclusive gateway: consume all active incoming edges and enable all combinations of outgoing
             active_incoming_flows = node.incoming_flows & marking
             if len(active_incoming_flows) > 0:
@@ -173,22 +187,63 @@ class BPMNModel:
         return []
 
     def get_enabled_nodes(self, marking: Set[str]) -> Set[str]:
+        """
+        Compute the set of enabled nodes given the current [marking]. A node (task, gateway, or event) is considered
+        to be enabled when it can be fired.
+        Warning! the start and end events are filtered out from the result.
+
+        :param marking: marking considered as reference to compute the enabled nodes.
+        :return: a set with the IDs of the enabled nodes (no start or end events).
+        """
         return {
             node.id
             for node in self.nodes
             if (not node.is_start_event() and not node.is_end_event()) and (
-                    (node.type == BPMNNodeType.PARALLEL_GATEWAY and node.incoming_flows.issubset(marking)) or
-                    (node.type != BPMNNodeType.PARALLEL_GATEWAY and len(node.incoming_flows & marking) > 0)
+                    (node.is_AND() and node.incoming_flows.issubset(marking)) or
+                    (not node.is_AND() and len(node.incoming_flows & marking) > 0)
             )
         }
 
-    def advance_marking(self, marking: Set[str]) -> List[Set[str]]:
+    def advance_marking_until_decision_point(self, marking: Set[str]) -> Set[str]:
         """
-        Advance the current marking as much as possible without executing any task, i.e., execute gateways and events
-        until there are none enabled.
+        Advance the current marking (every branch in it) as much as possible without executing any task, event, or
+        decision point, i.e., execute AND-split and all join gateways until there are none enabled.
 
-        :param marking: marking over which to compute the enabled nodes.
-        :return: list with the different markings result of such execution.
+        :param marking: marking to consider as starting point to perform the advance operation.
+        :return: marking after (recursively) executing all non-decision-point gateways (AND-split, AND-join, XOR-join,
+        OR-join).
+        """
+        advanced_marking = marking.copy()
+        # Get enabled gateways (AND-split, AND-join, XOR-join, OR-join)
+        enabled_gateways = [
+            node_id
+            for node_id in self.get_enabled_nodes(advanced_marking) if
+            self.id_to_node[node_id].is_gateway() and
+            (self.id_to_node[node_id].is_AND() or not self.id_to_node[node_id].is_split())
+        ]
+        # Run propagation until no more gateways (AND-split, AND-join, XOR-join, OR-join) can be fired
+        while len(enabled_gateways) > 0:
+            # Execute one of the enabled gateways and save result for next iteration
+            [advanced_marking] = self.simulate_execution(enabled_gateways[0], advanced_marking)
+            # Get enabled gateways (exclude XOR-splits & OR-splits)
+            enabled_gateways = [
+                node_id
+                for node_id in self.get_enabled_nodes(advanced_marking) if
+                self.id_to_node[node_id].is_gateway() and
+                (self.id_to_node[node_id].is_AND() or not self.id_to_node[node_id].is_split())
+            ]
+        # Return final set
+        return advanced_marking
+
+    def advance_marking_per_parallel_branch(self, marking: Set[str]) -> List[Set[str]]:
+        """
+        Advance each active (parallel) branch on the current marking as much as possible without executing any task,
+        i.e., execute gateways until there are none enabled. If there are multiple (parallel) branches, advance each of
+        them individually, i.e., each returned marking would correspond to the advancement in one branch. After
+        individually advancing each of them, advance the marking until reaching decision points, tasks, or events.
+
+        :param marking: marking to consider as starting point to perform the advance operation.
+        :return: list with the different markings result of such advancement.
         """
         # Initialize breath-first search list
         current_markings = [marking]
@@ -222,35 +277,49 @@ class BPMNModel:
         return final_markings
 
     def get_reachability_graph(self) -> ReachabilityGraph:
-        graph = ReachabilityGraph()
+        """
+        Storing a marking in the reachability graph, but advancing it in local
+        :return:
+        """
+        # Get initial BPMN marking and instantiate reachability graph
         initial_marking = self.get_initial_marking()
+        graph = ReachabilityGraph()
         graph.add_marking(initial_marking)
-        marking_stack = [initial_marking]
+        # Advance the initial marking (executing enabled gateways) and save them for exploration
+        advanced_marking_stack = []
+        reference_marking_stack = []
+        for advanced_marking in self.advance_marking_per_parallel_branch(initial_marking):
+            advanced_marking_stack += [advanced_marking]
+            reference_marking_stack += [initial_marking]
+        # Start exploration, for each "reference" marking, simulate in its corresponding advanced markings
         explored_markings = set()
-
-        while marking_stack:
-            # Retrieve current marking
-            current_marking = marking_stack.pop()
-            marking_key = tuple(sorted(current_marking))
-            # If it hasn't been explored
-            if marking_key not in explored_markings:
+        while len(advanced_marking_stack) > 0:
+            # Retrieve current markings
+            current_marking = advanced_marking_stack.pop()  # The marking to simulate over
+            reference_marking = reference_marking_stack.pop()  # Corresponding marking to use in the reachability graph
+            # If this marking hasn't been explored (reference marking + advanced marking)
+            exploration_key = (tuple(sorted(reference_marking)), tuple(sorted(current_marking)))
+            if exploration_key not in explored_markings:
                 # Add it to explored
-                explored_markings.add(marking_key)
-                # Fire all enabled nodes and save new markings
+                explored_markings.add(exploration_key)
+                # Fire all enabled activity/events and save new markings
                 for enabled_node_id in self.get_enabled_nodes(current_marking):
                     enabled_node = self.id_to_node[enabled_node_id]
                     if enabled_node.is_task() or enabled_node.is_event():
                         # Fire task/event (always returns 1 marking)
                         [new_marking] = self.simulate_execution(enabled_node_id, current_marking)
-                        # Advance the marking as much as possible (executing enabled gateways)
-                        new_markings = self.advance_marking(new_marking)
-                        # Update reachability graph
-                        for new_marking in new_markings:
-                            graph.add_marking(new_marking)
-                            graph.add_edge(enabled_node.name, current_marking, new_marking)
-                            # Save new marking if not explored
-                            if new_marking not in explored_markings:
-                                marking_stack.append(new_marking)
+                        # Advance the marking as much as possible without executing decision points (XOR-split/OR-split)
+                        new_reference_marking = self.advance_marking_until_decision_point(new_marking)
+                        # Advance the marking as much as possible (executing any enabled gateway)
+                        new_advanced_markings = self.advance_marking_per_parallel_branch(new_reference_marking)
+                        # For each new marking
+                        for new_advanced_marking in new_advanced_markings:
+                            # Update reachability graph
+                            graph.add_marking(new_reference_marking)  # Add reference marking to graph
+                            graph.add_edge(enabled_node.name, reference_marking, new_reference_marking)
+                            # Save new marking
+                            advanced_marking_stack += [new_advanced_marking]
+                            reference_marking_stack += [new_reference_marking]
         # Return reachability graph
         return graph
 

@@ -76,6 +76,39 @@ def _bpmn_model_with_XOR_within_AND() -> BPMNModel:
     return bpmn_model
 
 
+def _bpmn_model_with_AND_and_nested_XOR() -> BPMNModel:
+    bpmn_model = BPMNModel()
+    bpmn_model.add_event(BPMNNodeType.START_EVENT, "0", "Start")
+    bpmn_model.add_event(BPMNNodeType.END_EVENT, "25", "End")
+    bpmn_model.add_task("2", "A")
+    bpmn_model.add_task("10", "B")
+    bpmn_model.add_task("14", "C")
+    bpmn_model.add_task("15", "D")
+    bpmn_model.add_task("19", "E")
+    bpmn_model.add_task("23", "F")
+    bpmn_model.add_gateway(BPMNNodeType.PARALLEL_GATEWAY, "5", "AND-split")
+    bpmn_model.add_gateway(BPMNNodeType.PARALLEL_GATEWAY, "22", "AND-join")
+    bpmn_model.add_gateway(BPMNNodeType.EXCLUSIVE_GATEWAY, "7", "XOR-split")
+    bpmn_model.add_gateway(BPMNNodeType.EXCLUSIVE_GATEWAY, "11", "XOR-split")
+    bpmn_model.add_gateway(BPMNNodeType.EXCLUSIVE_GATEWAY, "26", "XOR-join")
+    bpmn_model.add_flow("1", "flow", "0", "2")
+    bpmn_model.add_flow("3", "flow", "2", "5")
+    bpmn_model.add_flow("4", "flow", "5", "7")
+    bpmn_model.add_flow("6", "flow", "5", "19")
+    bpmn_model.add_flow("8", "flow", "7", "10")
+    bpmn_model.add_flow("9", "flow", "7", "11")
+    bpmn_model.add_flow("12", "flow", "11", "14")
+    bpmn_model.add_flow("13", "flow", "11", "15")
+    bpmn_model.add_flow("16", "flow", "10", "26")
+    bpmn_model.add_flow("17", "flow", "14", "26")
+    bpmn_model.add_flow("18", "flow", "15", "26")
+    bpmn_model.add_flow("20", "flow", "19", "22")
+    bpmn_model.add_flow("21", "flow", "26", "22")
+    bpmn_model.add_flow("27", "flow", "22", "23")
+    bpmn_model.add_flow("24", "flow", "23", "25")
+    return bpmn_model
+
+
 def test_create_bpmn_model():
     bpmn_model = _bpmn_model_with_AND_and_XOR()
     # Assert general characteristics
@@ -130,26 +163,55 @@ def test_simulate_execution_and_enabled_nodes():
     assert len(marking) == 0
 
 
+def test_advance_marking_until_decision_point_simple_model():
+    bpmn_model = _bpmn_model_with_AND_and_XOR()
+    # Advance from state where the AND-split is enabled: it should execute it enabling both branches
+    marking = bpmn_model.advance_marking_until_decision_point({"3"})
+    assert marking == {"5", "6"}
+    # Advance from state where the AND-join is enabled: it should execute only the AND-join
+    marking = bpmn_model.advance_marking_until_decision_point({"9", "10"})
+    assert marking == {"12"}
+    # Advance from state where only one task is enabled: no advance
+    marking = bpmn_model.advance_marking_until_decision_point({"21"})
+    assert marking == {"21"}
+
+
 def test_advance_marking_simple_model():
     bpmn_model = _bpmn_model_with_AND_and_XOR()
     # Advance from state where the AND-split is enabled: it should execute it enabling both branches
-    marking = bpmn_model.advance_marking({"3"})
-    assert marking == [{"5", "6"}]
+    markings = bpmn_model.advance_marking({"3"})
+    assert markings == [{"5", "6"}]
     # Advance from state where the AND-join is enabled: it should execute both the AND-join and following XOR-split
     markings = bpmn_model.advance_marking({"9", "10"})
     assert len(markings) == 2
     assert {"14"} in markings
     assert {"15"} in markings
     # Advance from state where only one task is enabled: no advance
-    marking = bpmn_model.advance_marking({"21"})
-    assert marking == [{"21"}]
+    markings = bpmn_model.advance_marking({"21"})
+    assert markings == [{"21"}]
 
 
-def test_advance_marking_complex_model():
+def test_advance_marking_until_decision_point_XOR_within_AND_model():
     bpmn_model = _bpmn_model_with_XOR_within_AND()
     # Advance from state where only one task is enabled: no advance
-    marking = bpmn_model.advance_marking({"1"})
-    assert marking == [{"1"}]
+    marking = bpmn_model.advance_marking_until_decision_point({"1"})
+    assert marking == {"1"}
+    # Advance from state where the AND-split is enabled: it should execute the AND-split
+    marking = bpmn_model.advance_marking_until_decision_point({"3"})
+    assert marking == {"5", "6", "7"}
+    # Advance from state where only the XOR-join of 2 branches are enabled: it should advance until the AND-join
+    marking = bpmn_model.advance_marking_until_decision_point({"23", "26", "16"})
+    assert marking == {"32", "33", "16"}
+    # Advance from state where the three XOR-join are enabled: it should execute the XOR-join and AND-join
+    marking = bpmn_model.advance_marking_until_decision_point({"23", "26", "28"})
+    assert marking == {"36"}
+
+
+def test_advance_marking_XOR_within_AND_model():
+    bpmn_model = _bpmn_model_with_XOR_within_AND()
+    # Advance from state where only one task is enabled: no advance
+    markings = bpmn_model.advance_marking({"1"})
+    assert markings == [{"1"}]
     # Advance from state where the AND-split is enabled: it should execute the AND-split and each following XOR-split
     markings = bpmn_model.advance_marking({"3"})
     assert len(markings) == 8
@@ -169,16 +231,45 @@ def test_advance_marking_complex_model():
     assert markings == [{"36"}]
 
 
+def test_advance_marking_until_decision_point_nested_XOR_model():
+    bpmn_model = _bpmn_model_with_AND_and_nested_XOR()
+    # Advance from state where the AND-split is enabled: it should execute it enabling both branches
+    marking = bpmn_model.advance_marking_until_decision_point({"3"})
+    assert marking == {"4", "6"}
+    # Advance from state where one of the upper XOR-join is enabled: it should execute the XOR-join (not the AND-join)
+    marking = bpmn_model.advance_marking_until_decision_point({"6", "16"})
+    assert marking == {"6", "21"}
+    # Advance from state where one of the upper XOR-join is enabled and the lower AND branch: should fully advance
+    marking = bpmn_model.advance_marking_until_decision_point({"17", "20"})
+    assert marking == {"27"}
+
+
+def test_advance_marking_nested_XOR_model():
+    bpmn_model = _bpmn_model_with_AND_and_nested_XOR()
+    # Advance from state where the AND-split is enabled: it should execute it enabling both branches
+    markings = bpmn_model.advance_marking({"3"})
+    assert len(markings) == 3
+    assert {"6", "8"} in markings
+    assert {"6", "12"} in markings
+    assert {"6", "13"} in markings
+    # Advance from state where one of the upper XOR-join is enabled: it should execute the XOR-join (not the AND-join)
+    markings = bpmn_model.advance_marking({"6", "16"})
+    assert markings == [{"6", "21"}]
+    # Advance from state where one of the upper XOR-join is enabled and the lower AND branch: should fully advance
+    markings = bpmn_model.advance_marking({"17", "20"})
+    assert markings == [{"27"}]
+
+
 def test_reachability_graph_simple():
     bpmn_model = _bpmn_model_with_AND_and_XOR()
     reachability_graph = bpmn_model.get_reachability_graph()
     # Assert general sizes
-    assert len(reachability_graph.markings) == 8
-    assert len(reachability_graph.edges) == 10
+    assert len(reachability_graph.markings) == 7
+    assert len(reachability_graph.edges) == 8
     # Assert size of edges per activity
     assert len(reachability_graph.activity_to_edges["A"]) == 1
-    assert len(reachability_graph.activity_to_edges["B"]) == 3
-    assert len(reachability_graph.activity_to_edges["C"]) == 3
+    assert len(reachability_graph.activity_to_edges["B"]) == 2
+    assert len(reachability_graph.activity_to_edges["C"]) == 2
     assert len(reachability_graph.activity_to_edges["D"]) == 1
     assert len(reachability_graph.activity_to_edges["E"]) == 1
     assert len(reachability_graph.activity_to_edges["F"]) == 1
@@ -187,40 +278,36 @@ def test_reachability_graph_simple():
     assert (reachability_graph.marking_to_key[tuple(sorted({"5", "6"}))],
             reachability_graph.marking_to_key[tuple(sorted({"6", "9"}))]) in edges
     assert (reachability_graph.marking_to_key[tuple(sorted({"5", "10"}))],
-            reachability_graph.marking_to_key[tuple(sorted({"14"}))]) in edges
-    assert (reachability_graph.marking_to_key[tuple(sorted({"5", "10"}))],
-            reachability_graph.marking_to_key[tuple(sorted({"15"}))]) in edges
+            reachability_graph.marking_to_key[tuple(sorted({"12"}))]) in edges
 
 
-def test_reachability_graph_complex():
+def test_reachability_graph_XOR_within_AND():
     bpmn_model = _bpmn_model_with_XOR_within_AND()
     reachability_graph = bpmn_model.get_reachability_graph()
     # Assert general sizes
-    assert len(reachability_graph.markings) == 29
-    assert len(reachability_graph.edges) == 63
+    assert len(reachability_graph.markings) == 10
+    assert len(reachability_graph.edges) == 26
     # Assert size of edges per activity
-    assert len(reachability_graph.activity_to_edges["A"]) == 8
-    assert len(reachability_graph.activity_to_edges["B"]) == 9
-    assert len(reachability_graph.activity_to_edges["C"]) == 9
-    assert len(reachability_graph.activity_to_edges["D"]) == 9
-    assert len(reachability_graph.activity_to_edges["E"]) == 9
-    assert len(reachability_graph.activity_to_edges["F"]) == 9
-    assert len(reachability_graph.activity_to_edges["G"]) == 9
+    assert len(reachability_graph.activity_to_edges["A"]) == 1
+    assert len(reachability_graph.activity_to_edges["B"]) == 4
+    assert len(reachability_graph.activity_to_edges["C"]) == 4
+    assert len(reachability_graph.activity_to_edges["D"]) == 4
+    assert len(reachability_graph.activity_to_edges["E"]) == 4
+    assert len(reachability_graph.activity_to_edges["F"]) == 4
+    assert len(reachability_graph.activity_to_edges["G"]) == 4
     assert len(reachability_graph.activity_to_edges["H"]) == 1
     # Assert specific edges
     edges = {reachability_graph.edges[edge_id] for edge_id in reachability_graph.activity_to_edges["A"]}
     assert (reachability_graph.marking_to_key[tuple(sorted({"1"}))],
-            reachability_graph.marking_to_key[tuple(sorted({"11", "13", "16"}))]) in edges
-    assert (reachability_graph.marking_to_key[tuple(sorted({"1"}))],
-            reachability_graph.marking_to_key[tuple(sorted({"12", "14", "16"}))]) in edges
-    assert (reachability_graph.marking_to_key[tuple(sorted({"1"}))],
-            reachability_graph.marking_to_key[tuple(sorted({"11", "14", "15"}))]) in edges
+            reachability_graph.marking_to_key[tuple(sorted({"5", "6", "7"}))]) in edges
     edges = {reachability_graph.edges[edge_id] for edge_id in reachability_graph.activity_to_edges["B"]}
-    assert (reachability_graph.marking_to_key[tuple(sorted({"11", "13", "16"}))],
-            reachability_graph.marking_to_key[tuple(sorted({"32", "13", "16"}))]) in edges
-    assert (reachability_graph.marking_to_key[tuple(sorted({"11", "14", "15"}))],
-            reachability_graph.marking_to_key[tuple(sorted({"32", "14", "15"}))]) in edges
-    assert (reachability_graph.marking_to_key[tuple(sorted({"11", "33", "34"}))],
+    assert (reachability_graph.marking_to_key[tuple(sorted({"5", "6", "7"}))],
+            reachability_graph.marking_to_key[tuple(sorted({"32", "6", "7"}))]) in edges
+    assert (reachability_graph.marking_to_key[tuple(sorted({"5", "33", "7"}))],
+            reachability_graph.marking_to_key[tuple(sorted({"32", "33", "7"}))]) in edges
+    assert (reachability_graph.marking_to_key[tuple(sorted({"5", "6", "34"}))],
+            reachability_graph.marking_to_key[tuple(sorted({"32", "6", "34"}))]) in edges
+    assert (reachability_graph.marking_to_key[tuple(sorted({"5", "33", "34"}))],
             reachability_graph.marking_to_key[tuple(sorted({"36"}))]) in edges
     edges = {reachability_graph.edges[edge_id] for edge_id in reachability_graph.activity_to_edges["F"]}
     assert (reachability_graph.marking_to_key[tuple(sorted({"11", "13", "15"}))],
