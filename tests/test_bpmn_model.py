@@ -280,7 +280,6 @@ def test_reachability_graph_simple():
             reachability_graph.marking_to_key[tuple(sorted({"12"}))]) in edges
 
 
-@pytest.mark.skip(reason="Skipping until fully refactoring this feature")
 def test_reachability_graph_XOR_within_AND():
     bpmn_model = _bpmn_model_with_XOR_within_AND()
     reachability_graph = bpmn_model.get_reachability_graph()
@@ -310,11 +309,13 @@ def test_reachability_graph_XOR_within_AND():
     assert (reachability_graph.marking_to_key[tuple(sorted({"5", "33", "34"}))],
             reachability_graph.marking_to_key[tuple(sorted({"36"}))]) in edges
     edges = {reachability_graph.edges[edge_id] for edge_id in reachability_graph.activity_to_edges["F"]}
-    assert (reachability_graph.marking_to_key[tuple(sorted({"11", "13", "15"}))],
-            reachability_graph.marking_to_key[tuple(sorted({"11", "13", "34"}))]) in edges
-    assert (reachability_graph.marking_to_key[tuple(sorted({"12", "14", "15"}))],
-            reachability_graph.marking_to_key[tuple(sorted({"12", "14", "34"}))]) in edges
-    assert (reachability_graph.marking_to_key[tuple(sorted({"32", "33", "15"}))],
+    assert (reachability_graph.marking_to_key[tuple(sorted({"5", "6", "7"}))],
+            reachability_graph.marking_to_key[tuple(sorted({"5", "6", "34"}))]) in edges
+    assert (reachability_graph.marking_to_key[tuple(sorted({"5", "33", "7"}))],
+            reachability_graph.marking_to_key[tuple(sorted({"5", "33", "34"}))]) in edges
+    assert (reachability_graph.marking_to_key[tuple(sorted({"32", "6", "7"}))],
+            reachability_graph.marking_to_key[tuple(sorted({"32", "6", "34"}))]) in edges
+    assert (reachability_graph.marking_to_key[tuple(sorted({"32", "33", "7"}))],
             reachability_graph.marking_to_key[tuple(sorted({"36"}))]) in edges
     edges = {reachability_graph.edges[edge_id] for edge_id in reachability_graph.activity_to_edges["H"]}
     assert (reachability_graph.marking_to_key[tuple(sorted({"36"}))],
