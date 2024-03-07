@@ -255,10 +255,16 @@ class BPMNModel:
         :param marking: marking to consider as starting point to perform the advance operation.
         :return: list with the different markings result of such advancement.
         """
+        # First advance all branches at the same time until tasks, events, or decision points (XOR-split/OR-split)
+        advanced_marking = self.advance_marking_until_decision_point(marking)
         # Advance all branches together (getting all combinations of advancements)
-        advanced_markings = self._advance_marking(marking)
+        fully_advanced_markings = self._advance_marking(advanced_marking)
         # For each branch, try to rollback the advancements in other branches as much as possible
-        final_markings = self._try_rollback(marking, advanced_markings)
+        if fully_advanced_markings == [advanced_marking] or len(advanced_marking) == 1:
+            # If the marking did not advance, or there is only one branch, no need to try to rollback other branches
+            final_markings = fully_advanced_markings
+        else:
+            final_markings = self._try_rollback(advanced_marking, fully_advanced_markings)
         # Keep only final markings with enabled activities
         filtered_final_markings = []
         for final_marking in final_markings:
@@ -355,8 +361,14 @@ class BPMNModel:
                 if branch_flow_id not in combination
             ]
             filtered_branch_combinations.sort(key=len, reverse=True)
+            # Get markings where this branch advanced (it if did not advance, we do not have to rollback the others)
+            filtered_advanced_markings = [
+                advanced_marking
+                for advanced_marking in advanced_markings if
+                branch_flow_id not in advanced_marking
+            ]
             # From each advanced marking
-            for advanced_marking in advanced_markings:
+            for advanced_marking in filtered_advanced_markings:
                 # Try to rollback the advancements that were also reached when advancing the other branches
                 rollbacked = False
                 for other_branches in filtered_branch_combinations:
@@ -364,16 +376,21 @@ class BPMNModel:
                         if not rollbacked and advanced_marking_other_branch.issubset(advanced_marking):
                             # This advancement is independent of the current branch, rollback it
                             rollbacked = True
-                            rollbacked_marking = [
-                                advanced_marking - advanced_marking_other_branch | set(other_branches)]
+                            rollbacked_marking = advanced_marking - advanced_marking_other_branch | set(other_branches)
                             rollbacked_marking_key = tuple(sorted(rollbacked_marking))
                             if rollbacked_marking_key not in final_markings_keys:
                                 final_markings += [rollbacked_marking]
                                 final_markings_keys += [rollbacked_marking_key]
                 # If it was not rollbacked (i.e., all branches needed to advance until that point), keep it
                 if not rollbacked:
-                    final_markings += [advanced_marking]
-                    final_markings_keys += [tuple(sorted(advanced_marking))]
+                    advanced_marking_key = tuple(sorted(advanced_marking))
+                    if advanced_marking_key not in final_markings_keys:
+                        final_markings += [advanced_marking]
+                        final_markings_keys += [advanced_marking_key]
+        # If there is no final markings, it means that the advanced
+        # markings are already the final ones, no need to rollback
+        if len(final_markings) == 0:
+            final_markings = advanced_markings
         # Return final markings
         return final_markings
 
@@ -390,7 +407,6 @@ class BPMNModel:
         # Advance the initial marking (executing enabled gateways) and save them for exploration
         advanced_marking_stack = []
         reference_marking_stack = []
-        initial_marking = self.advance_marking_until_decision_point(initial_marking)
         for advanced_marking in self.advance_full_marking(initial_marking):
             advanced_marking_stack += [advanced_marking]
             reference_marking_stack += [initial_marking]
