@@ -2,7 +2,8 @@ import pytest
 
 from test_bpmn_model_fixtures import _bpmn_model_with_AND_and_XOR, _bpmn_model_with_XOR_within_AND, \
     _bpmn_model_with_AND_and_nested_XOR, _bpmn_model_with_loop_inside_AND, \
-    _bpmn_model_with_two_loops_inside_AND_followed_by_XOR_within_AND
+    _bpmn_model_with_two_loops_inside_AND_followed_by_XOR_within_AND, \
+    _bpmn_model_with_three_loops_inside_AND_two_of_them_inside_sub_AND
 
 
 def test_create_bpmn_model():
@@ -222,6 +223,40 @@ def test_advance_full_marking_double_loop_model():
     assert {"29", "25"} in markings
     assert {"24", "30"} in markings
     assert {"24", "31"} in markings
+
+
+def test_advance_marking_until_decision_point_triple_loop_model():
+    bpmn_model = _bpmn_model_with_three_loops_inside_AND_two_of_them_inside_sub_AND()
+    # Advance from initial marking: should traverse the AND-split and one XOR-join
+    marking = bpmn_model.advance_marking_until_decision_point({"1"})
+    assert marking == {"3", "26"}
+    # Advance from state where second AND-split is enabled and lower branch is before loop: should traverse all
+    marking = bpmn_model.advance_marking_until_decision_point({"7", "4"})
+    assert marking == {"13", "14", "26"}
+    # Advance from state where the three XOR-split are enabled, no advancement
+    marking = bpmn_model.advance_marking_until_decision_point({"17", "18", "28"})
+    assert marking == {"17", "18", "28"}
+
+
+def test_advance_full_marking_triple_loop_model():
+    bpmn_model = _bpmn_model_with_three_loops_inside_AND_two_of_them_inside_sub_AND()
+    # Advance from initial marking: should traverse the AND-split and one XOR-join
+    marking = bpmn_model.advance_marking_until_decision_point({"1"})
+    assert marking == {"3", "26"}
+    # Advance from state where second AND-split is enabled and lower branch is before loop: should traverse all
+    marking = bpmn_model.advance_marking_until_decision_point({"7", "4"})
+    assert marking == {"13", "14", "26"}
+    # Advance from state where the three loop XOR-split are enabled, it should:
+    # - Traverse one of them going back individually (the other two do not advance)
+    # - Traverse the second one going back individually (the other two do not advance)
+    # - Traverse the third one going back individually (the other two do not advance)
+    # - Traverse the two that end in the same AND-join together, and the AND-join too (the other branch holds)
+    markings = bpmn_model.advance_full_marking({"17", "18", "28"})
+    assert len(markings) == 4
+    assert {"13", "18", "28"} in markings
+    assert {"17", "14", "28"} in markings
+    assert {"17", "18", "26"} in markings
+    assert {"31", "28"} in markings
 
 
 def test_reachability_graph_simple():
