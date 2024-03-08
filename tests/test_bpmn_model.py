@@ -1,5 +1,3 @@
-import pytest
-
 from test_bpmn_model_fixtures import _bpmn_model_with_AND_and_XOR, _bpmn_model_with_XOR_within_AND, \
     _bpmn_model_with_AND_and_nested_XOR, _bpmn_model_with_loop_inside_AND, \
     _bpmn_model_with_two_loops_inside_AND_followed_by_XOR_within_AND, \
@@ -320,3 +318,32 @@ def test_reachability_graph_XOR_within_AND():
     edges = {reachability_graph.edges[edge_id] for edge_id in reachability_graph.activity_to_edges["H"]}
     assert (reachability_graph.marking_to_key[tuple(sorted({"36"}))],
             reachability_graph.marking_to_key[tuple(sorted({"38"}))]) in edges
+
+
+def test_reachability_graph_nested_XOR():
+    bpmn_model = _bpmn_model_with_AND_and_nested_XOR()
+    reachability_graph = bpmn_model.get_reachability_graph()
+    # Assert general sizes
+    assert len(reachability_graph.markings) == 6
+    assert len(reachability_graph.edges) == 10
+    # Assert size of edges per activity
+    assert len(reachability_graph.activity_to_edges["A"]) == 1
+    assert len(reachability_graph.activity_to_edges["B"]) == 2
+    assert len(reachability_graph.activity_to_edges["C"]) == 2
+    assert len(reachability_graph.activity_to_edges["D"]) == 2
+    assert len(reachability_graph.activity_to_edges["E"]) == 2
+    assert len(reachability_graph.activity_to_edges["F"]) == 1
+    # Assert specific edges
+    edges = {reachability_graph.edges[edge_id] for edge_id in reachability_graph.activity_to_edges["A"]}
+    assert (reachability_graph.marking_to_key[tuple(sorted({"1"}))],
+            reachability_graph.marking_to_key[tuple(sorted({"4", "6"}))]) in edges
+    edges = {reachability_graph.edges[edge_id] for edge_id in reachability_graph.activity_to_edges["C"]}
+    assert (reachability_graph.marking_to_key[tuple(sorted({"4", "6"}))],
+            reachability_graph.marking_to_key[tuple(sorted({"21", "6"}))]) in edges
+    assert (reachability_graph.marking_to_key[tuple(sorted({"4", "20"}))],
+            reachability_graph.marking_to_key[tuple(sorted({"27"}))]) in edges
+    edges = {reachability_graph.edges[edge_id] for edge_id in reachability_graph.activity_to_edges["E"]}
+    assert (reachability_graph.marking_to_key[tuple(sorted({"4", "6"}))],
+            reachability_graph.marking_to_key[tuple(sorted({"4", "20"}))]) in edges
+    assert (reachability_graph.marking_to_key[tuple(sorted({"21", "6"}))],
+            reachability_graph.marking_to_key[tuple(sorted({"27"}))]) in edges

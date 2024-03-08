@@ -396,20 +396,23 @@ class BPMNModel:
 
     def get_reachability_graph(self) -> ReachabilityGraph:
         """
-        Storing a marking in the reachability graph, but advancing it in local
+        Compute the reachability graph of this BPMN model. Each marking in the reachability graph contains the enabled
+        flows of that state, and corresponds to a state of the process where the only enabled elements are tasks,
+        events, and decision points (XOR-split/OR-split).
 
-        :return: TODO
+        :return: the reachability graph of this BPMN model.
         """
         # Get initial BPMN marking and instantiate reachability graph
         initial_marking = self.get_initial_marking()
+        initial_reference_marking = self.advance_marking_until_decision_point(initial_marking)
         graph = ReachabilityGraph()
-        graph.add_marking(initial_marking)
+        graph.add_marking(initial_reference_marking)
         # Advance the initial marking (executing enabled gateways) and save them for exploration
         advanced_marking_stack = []
         reference_marking_stack = []
-        for advanced_marking in self.advance_full_marking(initial_marking):
+        for advanced_marking in self.advance_full_marking(initial_reference_marking):
             advanced_marking_stack += [advanced_marking]
-            reference_marking_stack += [initial_marking]
+            reference_marking_stack += [initial_reference_marking]
         # Start exploration, for each "reference" marking, simulate in its corresponding advanced markings
         explored_markings = set()
         while len(advanced_marking_stack) > 0:
@@ -429,6 +432,10 @@ class BPMNModel:
                         [new_marking] = self.simulate_execution(enabled_node_id, current_marking)
                         # Advance the marking as much as possible without executing decision points (XOR-split/OR-split)
                         new_reference_marking = self.advance_marking_until_decision_point(new_marking)
+                        advanced = current_marking - reference_marking
+                        if advanced.issubset(new_reference_marking):
+                            original = reference_marking - current_marking
+                            new_reference_marking = new_reference_marking - advanced | original
                         # Advance the marking as much as possible (executing any enabled gateway)
                         new_advanced_markings = self.advance_full_marking(new_reference_marking)
                         # For each new marking
