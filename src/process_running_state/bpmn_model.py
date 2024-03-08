@@ -433,7 +433,7 @@ class BPMNModel:
                         # Advance the marking as much as possible without executing decision points (XOR-split/OR-split)
                         new_reference_marking = self.advance_marking_until_decision_point(new_marking)
                         advanced = current_marking - reference_marking
-                        if advanced.issubset(new_reference_marking):
+                        if len(advanced) > 0 and advanced.issubset(new_reference_marking):
                             original = reference_marking - current_marking
                             new_reference_marking = new_reference_marking - advanced | original
                         # Advance the marking as much as possible (executing any enabled gateway)
