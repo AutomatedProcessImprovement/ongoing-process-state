@@ -188,9 +188,8 @@ class BPMNModel:
 
     def get_enabled_nodes(self, marking: Set[str]) -> Set[str]:
         """
-        Compute the set of enabled nodes given the current [marking]. A node (task, gateway, or event) is considered
-        to be enabled when it can be fired.
-        Warning! the start and end events are filtered out from the result.
+        Compute the set of enabled nodes (excluding start/end events) given the current [marking]. A node (task,
+        gateway, or event) is considered to be enabled when it can be fired.
 
         :param marking: marking considered as reference to compute the enabled nodes.
         :return: a set with the IDs of the enabled nodes (no start or end events).
@@ -204,14 +203,20 @@ class BPMNModel:
             )
         }
 
-    def _is_any_task_event_enabled(self, marking: Set[str]) -> bool:
-        # Iterate over enabled nodes
-        for node in self.nodes:
-            # If any incoming edge is in marking: enabled!
-            if (node.is_task() or node.is_event()) and len(node.incoming_flows & marking) > 0:
-                return True
-        # Return false if no enabled task/event found
-        return False
+    def get_enabled_tasks_events(self, marking: Set[str]) -> Set[str]:
+        """
+        Compute the set of enabled tasks or events (excluding start/end events) given the current [marking].
+
+        :param marking: marking considered as reference to compute the enabled nodes.
+        :return: a set with the IDs of the enabled tasks/events (no start or end events).
+        """
+        return {
+            node.id
+            for node in self.nodes
+            if (node.is_task() or node.is_event()) and
+               (not node.is_start_event() and not node.is_end_event()) and
+               len(node.incoming_flows & marking) > 0
+        }
 
     def advance_marking_until_decision_point(self, marking: Set[str]) -> Set[str]:
         """
@@ -265,13 +270,15 @@ class BPMNModel:
             final_markings = fully_advanced_markings
         else:
             final_markings = self._try_rollback(advanced_marking, fully_advanced_markings)
-        # Keep only final markings with enabled activities
+        # Keep only final markings that enabled new tasks/events, otherwise the advancement is useless
         filtered_final_markings = []
+        enabled_in_marking = self.get_enabled_tasks_events(advanced_marking)
         for final_marking in final_markings:
-            if self._is_any_task_event_enabled(final_marking):
+            enabled_in_final_marking = self.get_enabled_tasks_events(final_marking)
+            if enabled_in_marking != enabled_in_final_marking:
                 filtered_final_markings += [final_marking]
-        # Return final markings
-        return filtered_final_markings
+        # Return final markings (if none of them enabled any new tasks/events return original marking)
+        return filtered_final_markings if len(filtered_final_markings) > 0 else [advanced_marking]
 
     def _advance_marking(self, marking: Set[str]) -> List[Set[str]]:
         """
