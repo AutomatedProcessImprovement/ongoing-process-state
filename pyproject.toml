@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "process-running-state"
-version = "0.1.0"
+version = "0.2.0"
 description = "Compute the running state (marking) of a trace."
 authors = ["David Chapela de la Campa <david.chapela.delacampa@gmail.com>"]
 readme = "README.md"
