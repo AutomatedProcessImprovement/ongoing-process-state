@@ -413,7 +413,7 @@ class BPMNModel:
         initial_marking = self.get_initial_marking()
         initial_reference_marking = self.advance_marking_until_decision_point(initial_marking)
         graph = ReachabilityGraph()
-        graph.add_marking(initial_reference_marking)
+        graph.add_marking(initial_reference_marking, is_initial=True)
         # Advance the initial marking (executing enabled gateways) and save them for exploration
         advanced_marking_stack = []
         reference_marking_stack = []

@@ -7,13 +7,16 @@ class ReachabilityGraph:
         self.marking_to_key = {}  # Dict with marking (sorted tuple) as key, and ID as value
         self.incoming_edges = {}  # Dict with marking ID as key, and set of incoming edges as value
         self.outgoing_edges = {}  # Dict with marking ID as key, and set of outgoing edges as value
+        self.initial_marking_id = None  # ID of the initial marking
 
-    def add_marking(self, marking: set):
+    def add_marking(self, marking: set, is_initial=False):
         marking_key = tuple(sorted(marking))
         if marking_key not in self.marking_to_key:
             marking_id = len(self.markings)
             self.markings[marking_id] = marking
             self.marking_to_key[marking_key] = marking_id
+            if is_initial:
+                self.initial_marking_id = marking_id
 
     def add_edge(self, activity: str, source_marking: set, target_marking: set):
         # Get edge components
