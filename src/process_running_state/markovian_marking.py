@@ -6,7 +6,7 @@ from process_running_state.reachability_graph import ReachabilityGraph
 class MarkovianMarking:
     TRACE_START = "DEFAULT_TRACE_START_LABEL"
 
-    def __int__(self, graph: ReachabilityGraph, n_gram_size_limit: int = 5):
+    def __init__(self, graph: ReachabilityGraph, n_gram_size_limit: int = 5):
         self.graph = graph
         self.n_gram_size_limit = n_gram_size_limit
         self.markings = {}  # Dict with the N-Gram (tuple) as key and list with marking(s) as value
@@ -25,46 +25,65 @@ class MarkovianMarking:
         else:
             self.markings[n_gram_key] = {marking}
 
-    def build(self):
-        # Go over the activity labels in the graph
-        for activity_label in self.graph.activity_to_edges:
-            # Save target markings
-            target_markings = {target_id for (_, target_id) in self.graph.activity_to_edges[activity_label]}
-            self.add_associations(activity_label, target_markings)
-            # Continue exploring the N-gram backwards until deterministic (only one marking) or limit reached
-            if len(target_markings) > 1 and self.n_gram_size_limit > 1:
-                # Expand backwards search for each target marking
-                for marking_id in target_markings:
-                    # Get source markings of the edges [activity_label] having the current one as target
-                    source_markings = {
-                        source_id
-                        for (source_id, target_id) in self.graph.activity_to_edges[activity_label]
-                        if target_id == marking_id
-                    }
-                    # Continue exploration
-                    self._explore_backwards(source_markings, marking_id, [activity_label])
+    def get_marking_state(self, n_gram: List[str]) -> Set[str]:
+        """
+        TODO
+        :param n_gram:
+        :return:
+        """
+        n_gram_key = tuple(n_gram)
+        markings = {}
+        # If present, retrieve marking IDs associated to this n-gram
+        if n_gram_key in self.markings:
+            markings = self.markings[n_gram_key]
+        # Return set of marking IDs
+        return markings
 
-    def _explore_backwards(self, source_markings: Set[str], target_marking: str, previous_n_gram: List[str]):
-        # Check if initial marking is part of markings
-        if self.graph.initial_marking in source_markings:
-            current_n_gram = [MarkovianMarking.TRACE_START] + previous_n_gram
-            self.add_association(current_n_gram, target_marking)
-        # Collect incoming edges for each source marking
-        incoming_edge_ids = {
-            edge_id
-            for edge_id in self.graph.markings[marking_id].incoming_edges
-            for marking_id in source_markings
-        }
-        # Process the incoming edges grouping per activity label
-        for activity_label in self.graph.activity_to_edges:
-            # Get edges incoming to any marking in [source_markings] with label [activity_label]
-            filtered_incoming_edge_ids = incoming_edge_ids & self.graph.activity_to_edges[activity_label]
-            # If any arc incoming to a source marking with [activity_label] as label
-            if len(filtered_incoming_edge_ids) > 0:
-                # Save target marking for grown n-gram
-                current_n_gram = [activity_label] + previous_n_gram
-                self.add_association(current_n_gram, target_marking)
-                # Continue exploring the N-gram backwards until deterministic (only one marking) or limit reached
-                if len(target_markings) > 1 and len(current_n_gram) < self.n_gram_size_limit:
-                    source_markings = {source_id for (source_id, target_id) in filtered_incoming_edge_ids}
-                    self._explore_backwards(current_n_gram, source_markings)
+    def build(self):
+        """
+        TODO
+        :return:
+        """
+        # Initialize stacks
+        marking_stack = list(self.graph.markings)  # Stack of markings to explore (incoming edges)
+        n_gram_stack = [[] for _ in marking_stack]  # n-gram (list of str) explored to reach each marking in the stack
+        target_marking_stack = marking_stack.copy()  # List of marking that each n-gram points to
+        # Continue with expansion while there are markings in the stack
+        while len(marking_stack) > 0:
+            # Initialize lists for next iteration
+            next_marking_stack = []
+            next_n_gram_stack = []
+            next_target_marking_stack = []
+            # Expand each of the markings in the stack backwards
+            while len(marking_stack) > 0:
+                # Retrieve marking to explore, n-gram that led (backwards) to it, and marking at the end of the n-gram
+                marking_id = marking_stack.pop()
+                previous_n_gram = n_gram_stack.pop()
+                target_marking = target_marking_stack.pop()
+                # If this marking is the initial marking, save corresponding association
+                if marking_id == self.graph.initial_marking_id:
+                    current_n_gram = [MarkovianMarking.TRACE_START] + previous_n_gram
+                    self.add_association(current_n_gram, target_marking)
+                # Grow n-gram with each incoming edge
+                for edge_id in self.graph.incoming_edges[marking_id]:
+                    # Add association
+                    current_n_gram = [self.graph.edge_to_activity[edge_id]] + previous_n_gram
+                    self.add_association(current_n_gram, target_marking)
+                    # Save source marking for exploration if necessary
+                    if len(current_n_gram) < self.n_gram_size_limit:
+                        (source_marking_id, _) = self.graph.edges[edge_id]
+                        next_marking_stack += [source_marking_id]
+                        next_n_gram_stack += [current_n_gram]
+                        next_target_marking_stack += [target_marking]
+            # Update search stacks when necessary to keep expanding backwards
+            while len(next_marking_stack) > 0:
+                # Retrieve marking to explore, n-gram that led (backwards) to it, and marking at the end of the n-gram
+                marking_id = next_marking_stack.pop()
+                previous_n_gram = next_n_gram_stack.pop()
+                target_marking = next_target_marking_stack.pop()
+                # If the n-gram is not deterministic, add it to search further
+                markings = self.get_marking_state(previous_n_gram)
+                if len(markings) > 1:
+                    marking_stack += [marking_id]
+                    n_gram_stack += [previous_n_gram]
+                    target_marking_stack += [target_marking]
