@@ -15,6 +15,8 @@ class ReachabilityGraph:
             marking_id = len(self.markings)
             self.markings[marking_id] = marking
             self.marking_to_key[marking_key] = marking_id
+            self.incoming_edges[marking_id] = set()
+            self.outgoing_edges[marking_id] = set()
             if is_initial:
                 self.initial_marking_id = marking_id
 
@@ -33,5 +35,5 @@ class ReachabilityGraph:
             self.edges[edge_id] = (source_id, target_id)
             self.activity_to_edges[activity] = self.activity_to_edges.get(activity, set()) | {edge_id}
             self.edge_to_activity[edge_id] = activity
-            self.incoming_edges[target_id] = self.incoming_edges.get(target_id, set()) | {edge_id}
-            self.outgoing_edges[source_id] = self.outgoing_edges.get(source_id, set()) | {edge_id}
+            self.incoming_edges[target_id] |= {edge_id}
+            self.outgoing_edges[source_id] |= {edge_id}
