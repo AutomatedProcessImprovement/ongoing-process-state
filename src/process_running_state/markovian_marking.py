@@ -25,7 +25,7 @@ class MarkovianMarking:
         else:
             self.markings[n_gram_key] = {marking}
 
-    def get_marking_state(self, n_gram: List[str]) -> Set[str]:
+    def get_marking_state(self, n_gram: List[str]) -> List[Set[str]]:
         """
         TODO
         :param n_gram:
@@ -36,8 +36,8 @@ class MarkovianMarking:
         # If present, retrieve marking IDs associated to this n-gram
         if n_gram_key in self.markings:
             markings = self.markings[n_gram_key]
-        # Return set of marking IDs
-        return markings
+        # Return set of markings
+        return [self.graph.markings[marking] for marking in markings]
 
     def build(self):
         """
