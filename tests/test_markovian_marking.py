@@ -117,20 +117,35 @@ def test_build_XOR_within_AND():
     assert markovian_marking.get_marking_state(["B", "G", "D"]) == [{"36"}]
 
 
-@pytest.mark.skip(reason="Test not yest finished")
 def test_build_nested_XOR():
     bpmn_model = _bpmn_model_with_AND_and_nested_XOR()
     reachability_graph = bpmn_model.get_reachability_graph()
     markovian_marking = MarkovianMarking(reachability_graph, n_gram_size_limit=3)
     markovian_marking.build()
-    # Check there is one entry per activity label
-    size_1_n_grams = [n_gram for n_gram in markovian_marking.markings if len(n_gram) == 1]
-    assert len(size_1_n_grams) == len(reachability_graph.activity_to_edges)
-    # Check the maximum size of the explored n-grams is under the limit
+    # Check the maximum size of the explored n-grams is under the needed one
     n_gram_sizes = [len(n_gram) for n_gram in markovian_marking.markings]
-    assert max(n_gram_sizes) <= 3
-    # Check specific markings
-    # TODO
+    assert max(n_gram_sizes) <= 2
+    # Check number of n-grams is the expected
+    assert len(markovian_marking.markings) == 7 + 10
+    # Check 1-gram markings (7)
+    assert markovian_marking.get_marking_state([MarkovianMarking.TRACE_START]) == [{"1"}]
+    assert markovian_marking.get_marking_state(["A"]) == [{"4", "6"}]
+    assert _prepare(markovian_marking.get_marking_state(["B"])) == _prepare([{"21", "6"}, {"27"}])
+    assert _prepare(markovian_marking.get_marking_state(["C"])) == _prepare([{"21", "6"}, {"27"}])
+    assert _prepare(markovian_marking.get_marking_state(["D"])) == _prepare([{"21", "6"}, {"27"}])
+    assert _prepare(markovian_marking.get_marking_state(["E"])) == _prepare([{"4", "20"}, {"27"}])
+    assert markovian_marking.get_marking_state(["F"]) == [{"24"}]
+    # Check 2-gram markings (10)
+    assert markovian_marking.get_marking_state(["A", "B"]) == [{"21", "6"}]
+    assert markovian_marking.get_marking_state(["A", "C"]) == [{"21", "6"}]
+    assert markovian_marking.get_marking_state(["A", "D"]) == [{"21", "6"}]
+    assert markovian_marking.get_marking_state(["A", "E"]) == [{"4", "20"}]
+    assert markovian_marking.get_marking_state(["B", "E"]) == [{"27"}]
+    assert markovian_marking.get_marking_state(["C", "E"]) == [{"27"}]
+    assert markovian_marking.get_marking_state(["D", "E"]) == [{"27"}]
+    assert markovian_marking.get_marking_state(["E", "B"]) == [{"27"}]
+    assert markovian_marking.get_marking_state(["E", "C"]) == [{"27"}]
+    assert markovian_marking.get_marking_state(["E", "D"]) == [{"27"}]
 
 
 @pytest.mark.skip(reason="Test not yest finished")
