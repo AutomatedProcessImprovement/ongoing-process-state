@@ -2,7 +2,8 @@ from typing import List, Set, Tuple
 
 from process_running_state.markovian_marking import MarkovianMarking
 from test_bpmn_model_fixtures import _bpmn_model_with_loop_inside_AND, _bpmn_model_with_AND_and_nested_XOR, \
-    _bpmn_model_with_XOR_within_AND, _bpmn_model_with_AND_and_XOR
+    _bpmn_model_with_XOR_within_AND, _bpmn_model_with_AND_and_XOR, \
+    _bpmn_model_with_two_loops_inside_AND_followed_by_XOR_within_AND
 
 
 def _prepare(markings: List[Set[str]]) -> Set[Tuple[str]]:
@@ -172,3 +173,55 @@ def test_build_loop_model():
     assert markovian_marking.get_marking_state(["A", "B", "B"]) == [{"11", "6"}]
     assert _prepare(markovian_marking.get_marking_state(["B", "B", "B"])) == _prepare([{"11", "6"}, {"11", "15"}])
     assert markovian_marking.get_marking_state(["C", "B", "B"]) == [{"11", "15"}]
+
+
+def test_build_double_loop_model():
+    bpmn_model = _bpmn_model_with_two_loops_inside_AND_followed_by_XOR_within_AND()
+    reachability_graph = bpmn_model.get_reachability_graph()
+    markovian_marking = MarkovianMarking(reachability_graph, n_gram_size_limit=3)
+    markovian_marking.build()
+    # Check the maximum size of the explored n-grams is under the needed one
+    n_gram_sizes = [len(n_gram) for n_gram in markovian_marking.markings]
+    assert max(n_gram_sizes) <= 3
+    # Check number of n-grams is the expected
+    assert len(markovian_marking.markings) == 9 + 22 + 6
+    # Check 1-gram markings (9)
+    assert markovian_marking.get_marking_state([MarkovianMarking.TRACE_START]) == [{"1"}]
+    assert markovian_marking.get_marking_state(["A"]) == [{"9", "10"}]
+    assert _prepare(markovian_marking.get_marking_state(["B"])) == _prepare([{"13", "10"}, {"13", "14"}])
+    assert _prepare(markovian_marking.get_marking_state(["C"])) == _prepare([{"9", "14"}, {"13", "14"}])
+    assert markovian_marking.get_marking_state(["D"]) == [{"40", "25"}, {"43"}]
+    assert markovian_marking.get_marking_state(["E"]) == [{"40", "25"}, {"43"}]
+    assert markovian_marking.get_marking_state(["F"]) == [{"24", "41"}, {"43"}]
+    assert markovian_marking.get_marking_state(["G"]) == [{"24", "41"}, {"43"}]
+    assert markovian_marking.get_marking_state(["H"]) == [{"45"}]
+    # Check 2-gram markings (22)
+    assert markovian_marking.get_marking_state(["A", "B"]) == [{"13", "10"}]
+    assert _prepare(markovian_marking.get_marking_state(["B", "B"])) == _prepare([{"13", "10"}, {"13", "14"}])
+    assert markovian_marking.get_marking_state(["C", "B"]) == [{"13", "14"}]
+    assert markovian_marking.get_marking_state(["A", "C"]) == [{"9", "14"}]
+    assert markovian_marking.get_marking_state(["B", "C"]) == [{"13", "14"}]
+    assert _prepare(markovian_marking.get_marking_state(["C", "C"])) == _prepare([{"9", "14"}, {"13", "14"}])
+    assert markovian_marking.get_marking_state(["B", "D"]) == [{"40", "25"}]
+    assert markovian_marking.get_marking_state(["C", "D"]) == [{"40", "25"}]
+    assert markovian_marking.get_marking_state(["F", "D"]) == [{"43"}]
+    assert markovian_marking.get_marking_state(["G", "D"]) == [{"43"}]
+    assert markovian_marking.get_marking_state(["B", "E"]) == [{"40", "25"}]
+    assert markovian_marking.get_marking_state(["C", "E"]) == [{"40", "25"}]
+    assert markovian_marking.get_marking_state(["F", "E"]) == [{"43"}]
+    assert markovian_marking.get_marking_state(["G", "E"]) == [{"43"}]
+    assert markovian_marking.get_marking_state(["B", "F"]) == [{"24", "41"}]
+    assert markovian_marking.get_marking_state(["C", "F"]) == [{"24", "41"}]
+    assert markovian_marking.get_marking_state(["D", "F"]) == [{"43"}]
+    assert markovian_marking.get_marking_state(["E", "F"]) == [{"43"}]
+    assert markovian_marking.get_marking_state(["B", "G"]) == [{"24", "41"}]
+    assert markovian_marking.get_marking_state(["C", "G"]) == [{"24", "41"}]
+    assert markovian_marking.get_marking_state(["D", "G"]) == [{"43"}]
+    assert markovian_marking.get_marking_state(["E", "G"]) == [{"43"}]
+    # Check 3-gram markings (6)
+    assert markovian_marking.get_marking_state(["A", "B", "B"]) == [{"13", "10"}]
+    assert _prepare(markovian_marking.get_marking_state(["B", "B", "B"])) == _prepare([{"13", "10"}, {"13", "14"}])
+    assert markovian_marking.get_marking_state(["C", "B", "B"]) == [{"13", "14"}]
+    assert markovian_marking.get_marking_state(["A", "C", "C"]) == [{"9", "14"}]
+    assert _prepare(markovian_marking.get_marking_state(["C", "C", "C"])) == _prepare([{"9", "14"}, {"13", "14"}])
+    assert markovian_marking.get_marking_state(["B", "C", "C"]) == [{"13", "14"}]
