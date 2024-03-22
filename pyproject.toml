@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "process-running-state"
-version = "0.3.0"
+version = "0.4.0"
 description = "Compute the running state (marking) of a trace."
 authors = ["David Chapela de la Campa <david.chapela.delacampa@gmail.com>"]
 readme = "README.md"
@@ -10,6 +10,9 @@ python = "^3.9"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.3.1"
+
+[tool.poetry.group.test.dependencies]
+pm4py = {path = "../schuster-prefix-alignments"}
 
 [build-system]
 requires = ["poetry-core"]
