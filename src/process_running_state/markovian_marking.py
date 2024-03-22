@@ -27,9 +27,11 @@ class MarkovianMarking:
 
     def get_marking_state(self, n_gram: List[str]) -> List[Set[str]]:
         """
-        TODO
-        :param n_gram:
-        :return:
+        Retrieve, given an n-gram representing the last N activities executed in a trace, the list of markings (set of
+        enabled flows) associated to that state.
+
+        :param n_gram: list of activity labels representing the last N activities recorded in the trace.
+        :return: a list with the marking(s) corresponding to the state of the process.
         """
         n_gram_key = tuple(n_gram)
         markings = {}
@@ -41,8 +43,8 @@ class MarkovianMarking:
 
     def build(self):
         """
-        TODO
-        :return:
+        Build the markovian marking mapping for the reachability graph in [self.graph] and with the n-limit stored in
+        [self.n_gram_size_limit].
         """
         # Initialize stacks
         marking_stack = list(self.graph.markings)  # Stack of markings to explore (incoming edges)
