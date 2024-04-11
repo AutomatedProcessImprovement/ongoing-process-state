@@ -68,8 +68,7 @@ def test_reachability_graph_model():
     assert len(graph.markings) == 8
 
 
-def test_get_marking_from_activity_sequence():
-    # Instantiate graph
+def _instantiate_simple_graph() -> ReachabilityGraph:
     graph = ReachabilityGraph()
     graph.add_marking({"1"}, True)
     graph.add_marking({"9", "6"})
@@ -85,6 +84,12 @@ def test_get_marking_from_activity_sequence():
     graph.add_edge("C", {"9", "6"}, {"9", "15"})
     graph.add_edge("C", {"11", "6"}, {"11", "15"})
     graph.add_edge("D", {"11", "15"}, {"19"})
+    return graph
+
+
+def test_get_marking_from_activity_sequence():
+    # Instantiate graph
+    graph = _instantiate_simple_graph()
     # Assert replayable sequences
     assert graph.get_marking_from_activity_sequence(["A", "B"]) == {"11", "6"}
     assert graph.get_marking_from_activity_sequence(["A", "B", "B"]) == {"11", "6"}
@@ -102,3 +107,26 @@ def test_get_marking_from_activity_sequence():
         graph.get_marking_from_activity_sequence(["A", "B", "C", "C"])
     with pytest.raises(RuntimeError):
         graph.get_marking_from_activity_sequence(["A", "B", "D"])
+
+
+def test_transformation_to_tgf():
+    # Instantiate graph
+    graph = _instantiate_simple_graph()
+    # Transform into string
+    tgf_string = graph.to_tgf_format()
+    # Assert certain lines are in the string
+    tgf_lines = tgf_string.splitlines()
+    assert tgf_lines[0] == "0 {'1'}"
+    assert tgf_lines[2] == "2 {'11', '6'}" or tgf_lines[2] == "2 {'6', '11'}"
+    assert tgf_lines[4] == "4 {'11', '15'}" or tgf_lines[4] == "4 {'15', '11'}"
+    assert tgf_lines[6] == "#"
+    edge_lines = tgf_lines[7:]
+    assert "0 1 A" in edge_lines
+    assert "2 2 B" in edge_lines
+    assert "1 3 C" in edge_lines
+    assert "2 4 C" in edge_lines
+    assert "4 5 D" in edge_lines
+    # Convert back to graph
+    read_graph = ReachabilityGraph.from_tgf_format(tgf_string)
+    # Assert some components
+    assert graph == read_graph

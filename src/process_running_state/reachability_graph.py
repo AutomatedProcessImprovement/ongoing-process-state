@@ -1,6 +1,9 @@
+import ast
+from dataclasses import dataclass
 from typing import List
 
 
+@dataclass
 class ReachabilityGraph:
     def __init__(self):
         self.edges = {}  # Dict with edge ID as key, and tuple source-target marking IDs as value
@@ -65,3 +68,85 @@ class ReachabilityGraph:
                 current_marking_id = self.edges[edge][1]
         # Return last reached marking
         return self.markings[current_marking_id]
+
+    def to_tgf_format(self):
+        """
+        Stores the reachability graph in a string following the Trivial Graph Format. As a reachability graph is a
+        directed graph where the nodes store a marking (set of IDs) and the edges the name of an activity, the label
+        of each node corresponds to the serialization of a set of strings (the marking) and the label of an edge the
+        name of the corresponding activity.
+
+        ** Note: the first node is assumed to be the initial marking.
+
+        Example:
+
+        0 {'1'}
+        1 {'9', '6'}
+        2 {'11', '6'}
+        3 {'9', '15'}
+        4 {'11', '15'}
+        5 {'19'}
+        #
+        0 1 Invoice Received
+        1 2 Notify Acceptance
+        1 3 Post Invoice
+        3 4 Notify Acceptance
+        2 4 Post Invoice
+        4 5 Pay Invoice
+        """
+        # Instantiate string to store conversion
+        tgf_string = ""
+        # Store markings
+        for marking_id in self.markings:
+            tgf_string += f"{marking_id} {self.markings[marking_id]}\n"
+        # Delimiter
+        tgf_string += "#\n"
+        # Store edges
+        for edge_id in self.edges:
+            (source_id, target_id) = self.edges[edge_id]
+            label = self.edge_to_activity[edge_id]
+            tgf_string += f"{source_id} {target_id} {label}\n"
+        # Return TGF formatted graph
+        return tgf_string
+
+    @staticmethod
+    def from_tgf_format(tgf_string: str) -> 'ReachabilityGraph':
+        """
+        Instantiate a reachability graph from a string containing its nodes and edges stored in Trivial Graph Format,
+        following the description in method "to_tgf_format".
+
+        :param tgf_string: string with the nodes and edges of the graph in a TGF format.
+        :return: an instance of the reachability graph.
+        """
+        # Instantiate empty graph and map for IDs
+        graph = ReachabilityGraph()
+        node_id_file_to_marking = dict()
+        lines = [line.strip() for line in tgf_string.splitlines() if line.strip() != ""]
+        # Go over the lines processing first nodes and then edges
+        state = 0  # processing nodes or edges
+        initial_marking = True
+        for line in lines:
+            if line == "#":
+                # Delimiter, switch to edges
+                state = 1
+            elif state == 0:
+                # -- Processing nodes
+                # Get ID and marking
+                id_in_file = line.split(" ")[0]
+                marking = ast.literal_eval(line[len(id_in_file) + 1:])
+                # Add node to graph
+                graph.add_marking(marking, initial_marking)
+                initial_marking = False
+                # Update ID conversion
+                node_id_file_to_marking[id_in_file] = marking
+            else:
+                # -- Processing edges
+                # Get source, target, and activity name
+                split_line = line.split(" ")
+                source_id = split_line[0]
+                target_id = split_line[1]
+                label = line[len(source_id) + len(target_id) + 2:]
+                # Add edge to graph
+                graph.add_edge(label, node_id_file_to_marking[source_id], node_id_file_to_marking[target_id])
+        # Return reachability graph
+        return graph
