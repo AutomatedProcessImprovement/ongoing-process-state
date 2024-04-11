@@ -1,3 +1,5 @@
+import pytest
+
 from process_running_state.reachability_graph import ReachabilityGraph
 
 
@@ -64,3 +66,39 @@ def test_reachability_graph_model():
     # Try to add an existing marking
     graph.add_marking({"b", "c"})
     assert len(graph.markings) == 8
+
+
+def test_get_marking_from_activity_sequence():
+    # Instantiate graph
+    graph = ReachabilityGraph()
+    graph.add_marking({"1"}, True)
+    graph.add_marking({"9", "6"})
+    graph.add_marking({"11", "6"})
+    graph.add_marking({"9", "15"})
+    graph.add_marking({"11", "15"})
+    graph.add_marking({"19"})
+    graph.add_edge("A", {"1"}, {"9", "6"})
+    graph.add_edge("B", {"9", "6"}, {"11", "6"})
+    graph.add_edge("B", {"11", "6"}, {"11", "6"})
+    graph.add_edge("B", {"9", "15"}, {"11", "15"})
+    graph.add_edge("B", {"11", "15"}, {"11", "15"})
+    graph.add_edge("C", {"9", "6"}, {"9", "15"})
+    graph.add_edge("C", {"11", "6"}, {"11", "15"})
+    graph.add_edge("D", {"11", "15"}, {"19"})
+    # Assert replayable sequences
+    assert graph.get_marking_from_activity_sequence(["A", "B"]) == {"11", "6"}
+    assert graph.get_marking_from_activity_sequence(["A", "B", "B"]) == {"11", "6"}
+    assert graph.get_marking_from_activity_sequence(["A", "B", "C"]) == {"11", "15"}
+    assert graph.get_marking_from_activity_sequence(["A", "B", "C", "B"]) == {"11", "15"}
+    assert graph.get_marking_from_activity_sequence(["A", "B", "B", "C", "B", "B"]) == {"11", "15"}
+    assert graph.get_marking_from_activity_sequence(["A", "B", "C", "B", "B", "D"]) == {"19"}
+    assert graph.get_marking_from_activity_sequence(["A", "C", "B"]) == {"11", "15"}
+    assert graph.get_marking_from_activity_sequence(["A", "C", "B", "B", "B"]) == {"11", "15"}
+    assert graph.get_marking_from_activity_sequence(["A", "C", "B", "D"]) == {"19"}
+    # Assert sequences raising errors
+    with pytest.raises(RuntimeError):
+        graph.get_marking_from_activity_sequence(["C"])
+    with pytest.raises(RuntimeError):
+        graph.get_marking_from_activity_sequence(["A", "B", "C", "C"])
+    with pytest.raises(RuntimeError):
+        graph.get_marking_from_activity_sequence(["A", "B", "D"])
