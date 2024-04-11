@@ -41,6 +41,38 @@ class MarkovianMarking:
         # Return set of markings
         return [self.graph.markings[marking] for marking in markings]
 
+    def get_best_marking_state_for(self, n_gram: List[str]) -> Set[str]:
+        """
+        Retrieve, given an n-gram representing the last N activities executed in a trace, the marking (set of enabled
+        flows) that has higher probability to be the one associated to that state. To do this, the function retrieves
+        the marking(s) of each k-gram (being k in 1..n) until the associated marking(s) is deterministic (only one
+        marking), or k = n (limit reached). If maximum size n-gram is reached and more than one marking are associated
+        to it, return one of them randomly.
+
+        :param n_gram: list of activity labels representing the last N activities recorded in the trace.
+        :return: the marking corresponding to the state of the case given the last N activities.
+        """
+        final_marking = set()
+        stop_search = False
+        k = 1
+        # Search iteratively for a deterministic marking
+        while not stop_search and k <= len(n_gram):
+            # Get marking(s) corresponding last K activities of the n-gram
+            markings = self.get_marking_state(n_gram[-k:])
+            if len(markings) == 1:
+                # Deterministic marking, stop search
+                final_marking = markings[0]
+                stop_search = True
+            elif len(markings) > 1:
+                # More than one marking, keep first and continue expanding n-gram
+                final_marking = markings[0]
+                k += 1
+            else:
+                # No marking(s) found, stop search
+                stop_search = True
+        # Return found marking
+        return final_marking
+
     def build(self):
         """
         Build the markovian marking mapping for the reachability graph in [self.graph] and with the n-limit stored in

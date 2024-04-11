@@ -285,3 +285,31 @@ def test_build_triple_loop_model():
         [{"13", "18", "26"}, {"13", "18", "28"}, {"17", "18", "26"}, {"17", "18", "28"}])
     assert _prepare(markovian_marking.get_marking_state(["D", "D", "D"])) == _prepare(
         [{"3", "28"}, {"13", "14", "28"}, {"17", "14", "28"}, {"13", "18", "28"}, {"17", "18", "28"}, {"33", "28"}])
+
+
+def test_get_best_marking_state_for():
+    bpmn_model = _bpmn_model_with_three_loops_inside_AND_two_of_them_inside_sub_AND()
+    reachability_graph = bpmn_model.get_reachability_graph()
+    markovian_marking = MarkovianMarking(reachability_graph, n_gram_size_limit=3)
+    markovian_marking.build()
+    # Assert n-grams that get one single state with the 1-gram
+    assert markovian_marking.get_best_marking_state_for(["F"]) == {"38"}
+    assert markovian_marking.get_best_marking_state_for(["E", "F"]) == {"38"}
+    assert markovian_marking.get_best_marking_state_for(["E", "D", "F"]) == {"38"}
+    assert markovian_marking.get_best_marking_state_for([MarkovianMarking.TRACE_START]) == {"3", "26"}
+    # Assert n-grams that get one single state with the 2-gram
+    assert markovian_marking.get_best_marking_state_for(["D", "A"]) == {"13", "14", "28"}
+    assert markovian_marking.get_best_marking_state_for(["E", "D", "A"]) == {"13", "14", "28"}
+    assert markovian_marking.get_best_marking_state_for(["D", "E"]) == {"33", "28"}
+    assert markovian_marking.get_best_marking_state_for(["A", "D", "E"]) == {"33", "28"}
+    assert markovian_marking.get_best_marking_state_for(["A", "D"]) == {"13", "14", "28"}
+    assert markovian_marking.get_best_marking_state_for(["D", "A", "D"]) == {"13", "14", "28"}
+    # Assert n-grams that don't get deterministic even with the complete n-gram
+    assert markovian_marking.get_best_marking_state_for(["C", "D"]) in [{"13", "18", "28"}, {"17", "18", "28"}]
+    assert markovian_marking.get_best_marking_state_for(["A", "C", "D"]) in [{"13", "18", "28"}, {"17", "18", "28"}]
+    assert markovian_marking.get_best_marking_state_for(["B", "B", "B"]) in [{"17", "14", "26"}, {"17", "14", "28"},
+                                                                             {"17", "18", "26"}, {"17", "18", "28"}]
+    assert markovian_marking.get_best_marking_state_for(["C", "B", "B", "B"]) in [{"17", "14", "26"},
+                                                                                  {"17", "14", "28"},
+                                                                                  {"17", "18", "26"},
+                                                                                  {"17", "18", "28"}]
