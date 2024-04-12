@@ -26,10 +26,6 @@ def calculate_prefix_alignments_multiprocessing(petri_net_path, log):
         result = calculate_prefix_alignment_modified_a_star_with_heuristic_without_recalculation(trace, net, im, fm)
         # Total runtime: 2831.81 sec # Average runtime: 2.69 sec
         # result = calculate_prefix_alignment_occ(trace, net, im, fm)
-        # result = calculate_prefix_alignment_occ(trace, net, im, fm, window_size=1)
-        # result = calculate_prefix_alignment_occ(trace, net, im, fm, window_size=2)
-        # result = calculate_prefix_alignment_occ(trace, net, im, fm, window_size=5)
-        # result = calculate_prefix_alignment_occ(trace, net, im, fm, window_size=10)
         end = time.time()
         total_runtime += end - start
         # print("\n".join([f"{element['label']} -> {element['name']}" for element in result["alignment"]]))
