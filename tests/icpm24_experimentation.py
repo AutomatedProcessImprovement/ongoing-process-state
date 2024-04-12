@@ -1,8 +1,10 @@
 import time
 from enum import Enum
+from pathlib import Path
 from typing import Tuple, List, Set
 
 import numpy as np
+from pix_framework.io.event_log import read_csv_log, DEFAULT_CSV_IDS
 from pm4py.objects import petri
 from pm4py.objects.log.importer.xes import factory as xes_import_factory
 from scipy.stats import t
@@ -12,6 +14,7 @@ from icpm24_prefix_alignment import calculate_prefix_alignment_modified_a_star_w
 from process_running_state.bpmn_model import BPMNModel
 from process_running_state.markovian_marking import MarkovianMarking
 from process_running_state.reachability_graph import ReachabilityGraph
+from process_running_state.utils import read_bpmn_model
 
 
 class AlignmentType(Enum):
@@ -27,15 +30,16 @@ def compute_current_states():
     - In this way, the states can be reused later to evaluate any of the RQs.
     """
     # Instantiate datasets
-    datasets = ["Sepsis_Cases", "BPIC_2019", "Traffic_Fines"]
-    # For each dataset,
+    datasets = ["sepsis_cases"]
+    log_ids = DEFAULT_CSV_IDS
+    # For each dataset
     for dataset in datasets:
         # Instantiate paths
-        ongoing_cases_csv = f"../inputs/{dataset}_ongoing.csv.gz"
-        ongoing_cases_xes = f"../inputs/{dataset}_ongoing.xes.gz"
-        bpmn_model_path = f"../inputs/{dataset}.bpmn"
-        pnml_model_path = f"../inputs/{dataset}.pnml"
-        output_filename = f"../outputs/{dataset}_ongoing_states.csv"
+        ongoing_cases_csv = Path(f"../inputs/{dataset}.csv.gz")
+        ongoing_cases_xes = f"../inputs/{dataset}.xes.gz"
+        bpmn_model_path = Path(f"../inputs/{dataset}.bpmn")
+        pnml_model_path = Path(f"../inputs/{dataset}.pnml")
+        output_filename = Path(f"../outputs/{dataset}_ongoing_states.csv")
         # Read preprocessed event log(s)
         event_log_xes = xes_import_factory.apply(ongoing_cases_xes)
         event_log_csv = read_csv_log(ongoing_cases_csv, log_ids)
@@ -102,6 +106,7 @@ def compute_markovian_marking(
         start = time.time()
         reachability_graph = bpmn_model.get_reachability_graph()
         markovian_marking = MarkovianMarking(reachability_graph, n_gram_size_limit)
+        markovian_marking.build()
         end = time.time()
         runtimes += [end - start]
         if i == 0:
@@ -191,5 +196,5 @@ def compute_mean_conf_interval(data: list, confidence: float = 0.95) -> Tuple[fl
 
 if __name__ == '__main__':
     compute_current_states()
-    evaluation_question_one()
-    evaluation_question_two()
+    # evaluation_question_one()
+    # evaluation_question_two()
