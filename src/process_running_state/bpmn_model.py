@@ -124,6 +124,7 @@ class BPMNModel:
             # Add flow to model
             flow = Flow(flow_id, flow_name, source_id, target_id)
             self.flows |= {flow}
+            self.id_to_flow[flow_id] = flow
             source.outgoing_flows |= {flow_id}
             target.incoming_flows |= {flow_id}
 
