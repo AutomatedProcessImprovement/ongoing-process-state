@@ -87,6 +87,6 @@ if __name__ == '__main__':
     dirname = os.path.dirname(__file__)
     path_to_files = os.path.join(dirname, '..', 'inputs')
     calculate_prefix_alignments_multiprocessing(
-        petri_net_path=os.path.join(path_to_files, "sepsis-cases.pnml"),
+        petri_net_path=os.path.join(path_to_files, "sepsis_cases.pnml"),
         log=xes_import_factory.apply(os.path.join(path_to_files, "sepsis_cases.xes.gz")),
     )
