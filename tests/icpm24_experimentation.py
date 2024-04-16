@@ -35,14 +35,14 @@ def compute_current_states():
     # For each dataset
     for dataset in datasets:
         # Instantiate paths
-        ongoing_cases_csv = Path(f"../inputs/{dataset}.csv.gz")
-        ongoing_cases_xes = f"../inputs/{dataset}.xes.gz"
+        ongoing_cases_csv = Path(f"../inputs/{dataset}_ongoing.csv.gz")
+        ongoing_cases_xes = f"../inputs/{dataset}_ongoing.xes.gz"
         bpmn_model_path = Path(f"../inputs/{dataset}.bpmn")
         pnml_model_path = Path(f"../inputs/{dataset}.pnml")
         output_filename = Path(f"../outputs/{dataset}_ongoing_states.csv")
         # Read preprocessed event log(s)
         event_log_xes = xes_import_factory.apply(ongoing_cases_xes)
-        event_log_csv = read_csv_log(ongoing_cases_csv, log_ids)
+        event_log_csv = read_csv_log(ongoing_cases_csv, log_ids, sort=True)
         # Read proces model(s)
         bpmn_model = read_bpmn_model(bpmn_model_path)
         pnml_model, initial_marking, final_marking = petri.importer.pnml.import_net(pnml_model_path)
@@ -61,25 +61,26 @@ def compute_current_states():
             output_file.write(f"build-marking-9,,,{runtime_avg}, {runtime_cnf}\n")
             # Compute with alignments
             for trace in event_log_xes:
+                trace_id = trace.attributes['concept:name']
                 # A-star with recalculation
                 state, runtime_avg, runtime_cnf = get_state_prefix_alignment(trace, pnml_model, initial_marking,
                                                                              final_marking, AlignmentType.IASR,
                                                                              markovian_marking_3.graph)
-                output_file.write(f"IASR,{trace.id},{state},{runtime_avg}, {runtime_cnf}\n")
+                output_file.write(f"IASR,{trace_id},{state},{runtime_avg}, {runtime_cnf}\n")
                 # A-star without recalculation
                 state, runtime_avg, runtime_cnf = get_state_prefix_alignment(trace, pnml_model, initial_marking,
                                                                              final_marking, AlignmentType.IAS,
                                                                              markovian_marking_3.graph)
-                output_file.write(f"IAS,{trace.id},{state},{runtime_avg}, {runtime_cnf}\n")
+                output_file.write(f"IAS,{trace_id},{state},{runtime_avg}, {runtime_cnf}\n")
                 # OCC
                 state, runtime_avg, runtime_cnf = get_state_prefix_alignment(trace, pnml_model, initial_marking,
                                                                              final_marking, AlignmentType.OCC,
                                                                              markovian_marking_3.graph)
-                output_file.write(f"OCC,{trace.id},{state},{runtime_avg}, {runtime_cnf}\n")
+                output_file.write(f"OCC,{trace_id},{state},{runtime_avg}, {runtime_cnf}\n")
             # Compute with our proposal
             for trace_id, events in event_log_csv.groupby(log_ids.case):
                 n = min(len(events), 9)
-                n_gram = list(events.sort_values(log_ids.end_time, axis=1).tail(n)[log_ids.activity])
+                n_gram = list(events.tail(n)[log_ids.activity])
                 # 3-gram
                 state, runtime_avg, runtime_cnf = get_state_markovian_marking(markovian_marking_3, n_gram)
                 output_file.write(f"marking-3,{trace_id},{state},{runtime_avg}, {runtime_cnf}\n")
@@ -145,7 +146,12 @@ def get_state_prefix_alignment(
         end = time.time()
         runtimes += [end - start]
         if i == 0:
-            state = reachability_graph.get_marking_from_activity_sequence(result)
+            model_movements = [
+                element['label'][1]
+                for element in result['alignment']
+                if element['name'][1] != '>>' and element['label'][1] is not None
+            ]
+            state = reachability_graph.get_marking_from_activity_sequence(model_movements)
     # Compute runtime confidence interval
     runtime_avg, runtime_cnf = compute_mean_conf_interval(runtimes)
     return state, runtime_avg, runtime_cnf
