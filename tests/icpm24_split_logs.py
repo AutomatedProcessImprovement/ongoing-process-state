@@ -1,4 +1,5 @@
 from pathlib import Path
+from random import randrange
 
 import pandas as pd
 from pix_framework.io.event_log import DEFAULT_CSV_IDS, read_csv_log, DEFAULT_XES_IDS, EventLogIDs
@@ -43,7 +44,15 @@ def split_logs_into_ongoing_cases():
 
 
 def compute_number_of_events_to_retain(events: pd.DataFrame) -> int:
-    return len(events) - 5 if len(events) > 5 else len(events)  # TODO improve
+    """
+    Return the number of events from a trace to retain as executed ones. The remaining
+    ones will be considered as future events.
+    """
+    left_padding = 5
+    right_padding = 3
+    start = min(len(events), left_padding)
+    stop = max(start, len(events) - right_padding)
+    return randrange(start, stop + 1)  # randrange returns in [start, stop)
 
 
 def export_as_csv(event_log: pd.DataFrame, file_path: Path):
