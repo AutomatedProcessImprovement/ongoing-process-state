@@ -16,6 +16,8 @@ from process_running_state.markovian_marking import MarkovianMarking
 from process_running_state.reachability_graph import ReachabilityGraph
 from process_running_state.utils import read_bpmn_model
 
+number_of_runs = 10
+
 
 class AlignmentType(Enum):
     IASR = 0
@@ -103,7 +105,7 @@ def compute_markovian_marking(
     runtimes = []
     final_markovian_marking = None
     # Compute state 10 times
-    for i in range(10):
+    for i in range(number_of_runs):
         start = time.time()
         reachability_graph = bpmn_model.get_reachability_graph()
         markovian_marking = MarkovianMarking(reachability_graph, n_gram_size_limit)
@@ -129,7 +131,7 @@ def get_state_prefix_alignment(
     runtimes = []
     state = None
     # Compute state 10 times
-    for i in range(10):
+    for i in range(number_of_runs):
         start = time.time()
         if alignment_type == AlignmentType.IASR:
             result = calculate_prefix_alignment_modified_a_star_with_heuristic(trace, pnml_model,
@@ -165,7 +167,7 @@ def get_state_markovian_marking(
     runtimes = []
     state = None
     # Compute state 10 times
-    for i in range(10):
+    for i in range(number_of_runs):
         start = time.time()
         result = markovian_marking.get_best_marking_state_for(n_gram)
         end = time.time()
