@@ -36,6 +36,7 @@ def compute_current_states():
     log_ids = DEFAULT_CSV_IDS
     # For each dataset
     for dataset in datasets:
+        print(f"\n\n----- Processing dataset: {dataset} -----\n")
         # Instantiate paths
         ongoing_cases_csv = Path(f"../inputs/{dataset}_ongoing.csv.gz")
         ongoing_cases_xes = f"../inputs/{dataset}_ongoing.xes.gz"
@@ -45,11 +46,13 @@ def compute_current_states():
         # Read preprocessed event log(s)
         event_log_xes = xes_import_factory.apply(ongoing_cases_xes)
         event_log_csv = read_csv_log(ongoing_cases_csv, log_ids, sort=True)
+        log_size = len(event_log_xes)
         # Read proces model(s)
         bpmn_model = read_bpmn_model(bpmn_model_path)
         pnml_model, initial_marking, final_marking = petri.importer.pnml.import_net(pnml_model_path)
         # Open file and compute&save ongoing states
         with open(output_filename, 'a') as output_file:
+            print("--- Computing N-Gram indexes ---\n")
             # Write headers
             output_file.write("technique,case_id,state,runtime_avg,runtime_cnf\n")
             # Compute markings
@@ -61,6 +64,8 @@ def compute_current_states():
             output_file.write(f"build-marking-7,,,{runtime_avg}, {runtime_cnf}\n")
             markovian_marking_9, runtime_avg, runtime_cnf = compute_markovian_marking(bpmn_model, 9)
             output_file.write(f"build-marking-9,,,{runtime_avg}, {runtime_cnf}\n")
+            i = 0
+            print("--- Computing with Prefix-Alignments ---\n")
             # Compute with alignments
             for trace in event_log_xes:
                 trace_id = trace.attributes['concept:name']
@@ -79,6 +84,11 @@ def compute_current_states():
                                                                              final_marking, AlignmentType.OCC,
                                                                              markovian_marking_3.graph)
                 output_file.write(f"OCC,{trace_id},{state},{runtime_avg}, {runtime_cnf}\n")
+                i += 1
+                if i % 10 == 0 or i == log_size:
+                    print(f"\tProcessed {i}/{log_size}\n")
+            i = 0
+            print("--- Computing with N-Gram Indexing ---\n")
             # Compute with our proposal
             for trace_id, events in event_log_csv.groupby(log_ids.case):
                 n = min(len(events), 9)
@@ -95,6 +105,9 @@ def compute_current_states():
                 # 9-gram
                 state, runtime_avg, runtime_cnf = get_state_markovian_marking(markovian_marking_9, n_gram)
                 output_file.write(f"marking-9,{trace_id},{state},{runtime_avg}, {runtime_cnf}\n")
+                i += 1
+                if i % 10 == 0 or i == log_size:
+                    print(f"\tProcessed {i}/{log_size}\n")
 
 
 def compute_markovian_marking(
