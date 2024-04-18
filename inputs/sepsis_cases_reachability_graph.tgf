@@ -1,0 +1,38 @@
+0 {'edge3'}
+1 {'edge1'}
+2 {'edge0'}
+3 {'edge4'}
+4 {'edge6'}
+5 {'edge15'}
+6 {'edge24'}
+7 {'edge10'}
+8 {'edge41'}
+9 {'edge2'}
+10 {'edge7'}
+11 {'edge40'}
+12 {'edge30'}
+#
+0 1 ER Registration
+1 2 ER Triage
+2 3 ER Sepsis Triage
+3 4 Leucocytes
+4 5 Release A
+5 6 Return ER
+4 7 CRP
+7 4 Leucocytes
+4 8 LacticAcid
+8 4 Leucocytes
+8 7 CRP
+7 8 LacticAcid
+7 5 Release A
+7 6 Release E
+7 6 Release B
+7 6 Release C
+7 6 Release D
+3 9 IV Liquid
+9 10 IV Antibiotics
+10 11 Admission NC
+11 4 Leucocytes
+11 7 CRP
+10 12 Admission IC
+12 8 LacticAcid
