@@ -43,6 +43,7 @@ def compute_current_states():
         bpmn_model_path = Path(f"../inputs/{dataset}.bpmn")
         pnml_model_path = Path(f"../inputs/{dataset}.pnml")
         output_filename = Path(f"../outputs/{dataset}_ongoing_states.csv")
+        reachability_graph_path = Path(f"../outputs/{dataset}_reachability_graph.tgf")
         # Read preprocessed event log(s)
         event_log_xes = xes_import_factory.apply(ongoing_cases_xes)
         event_log_csv = read_csv_log(ongoing_cases_csv, log_ids, sort=True)
@@ -50,6 +51,9 @@ def compute_current_states():
         # Read proces model(s)
         bpmn_model = read_bpmn_model(bpmn_model_path)
         pnml_model, initial_marking, final_marking = petri.importer.pnml.import_net(pnml_model_path)
+        # Compute and export reachability graph
+        with open(reachability_graph_path, 'w') as output_file:
+            output_file.write(bpmn_model.get_reachability_graph().to_tgf_format())
         # Open file and compute&save ongoing states
         with open(output_filename, 'a') as output_file:
             print("--- Computing N-Gram indexes ---\n")
@@ -192,14 +196,6 @@ def get_state_markovian_marking(
     return state, runtime_avg, runtime_cnf
 
 
-def evaluation_question_one():
-    pass
-
-
-def evaluation_question_two():
-    pass
-
-
 def compute_mean_conf_interval(data: list, confidence: float = 0.95) -> Tuple[float, float]:
     # Compute the sample mean and standard deviation
     sample_mean = float(np.mean(data))
@@ -217,5 +213,3 @@ def compute_mean_conf_interval(data: list, confidence: float = 0.95) -> Tuple[fl
 
 if __name__ == '__main__':
     compute_current_states()
-    # evaluation_question_one()
-    # evaluation_question_two()
