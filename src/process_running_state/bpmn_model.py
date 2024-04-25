@@ -362,24 +362,40 @@ class BPMNModel:
         }
         # For each branch
         for branch_flow_id in marking:
-            # Get combinations of other branches
-            filtered_branch_combinations = [
+            # Get combinations including own branch
+            filtered_own_branch_combinations = [
                 combination
                 for combination in advanced_markings_other_branches.keys()
-                if branch_flow_id not in combination
+                if branch_flow_id in combination
             ]
-            filtered_branch_combinations.sort(key=len, reverse=True)
+            filtered_own_branch_combinations.sort(key=len)  # Sort ascending to find the smaller one first
             # Get markings where this branch advanced (it if did not advance, we do not have to rollback the others)
             filtered_advanced_markings = [
                 advanced_marking
                 for advanced_marking in advanced_markings if
                 branch_flow_id not in advanced_marking
             ]
-            # From each advanced marking
+            # From each advanced marking (where this branch also advanced)
             for advanced_marking in filtered_advanced_markings:
+                # Identify the combination of branches needed for this branch to advance in this advanced marking
+                advanced_combination = set(marking)  # If no other smaller combination found, all branches were needed
+                found = False
+                for own_branch_combination in filtered_own_branch_combinations:
+                    for advanced_marking_with_own_branch in advanced_markings_other_branches[own_branch_combination]:
+                        if not found and advanced_marking_with_own_branch.issubset(advanced_marking):
+                            # All these branches were needed to advance current one, save to not rollback them
+                            found = True
+                            advanced_combination = set(own_branch_combination)
+                # Get combinations of advancements of other branches not including the needed to advance own one
+                filtered_other_branch_combinations = [
+                    combination
+                    for combination in advanced_markings_other_branches.keys()
+                    if not advanced_combination & set(combination)  # No branches in [combination] had to advance
+                ]
+                filtered_other_branch_combinations.sort(key=len, reverse=True)
                 # Try to rollback the advancements that were also reached when advancing the other branches
                 rollbacked = False
-                for other_branches in filtered_branch_combinations:
+                for other_branches in filtered_other_branch_combinations:
                     for advanced_marking_other_branch in advanced_markings_other_branches[other_branches]:
                         if not rollbacked and advanced_marking_other_branch.issubset(advanced_marking):
                             # This advancement is independent of the current branch, rollback it
