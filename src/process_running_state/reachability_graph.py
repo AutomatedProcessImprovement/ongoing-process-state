@@ -1,6 +1,6 @@
 import ast
 from dataclasses import dataclass
-from typing import List
+from typing import List, Set
 
 
 @dataclass
@@ -44,30 +44,35 @@ class ReachabilityGraph:
             self.incoming_edges[target_id] |= {edge_id}
             self.outgoing_edges[source_id] |= {edge_id}
 
-    def get_marking_from_activity_sequence(self, activity_sequence: List[str]):
+    def get_markings_from_activity_sequence(self, activity_sequence: List[str]) -> List[Set[str]]:
         # Initiate search in the initial marking
-        current_marking_id = self.initial_marking_id
+        current_marking_ids = {self.initial_marking_id}
         # Iterate over the activity sequence advancing in the reachability graph
+        errors = []  # List with paths that could not continue propagation
         for activity in activity_sequence:
-            # Retrieve edges leaving current marking with the activity as label
-            potential_edges = [
-                edge
-                for edge in self.outgoing_edges[current_marking_id]
-                if self.edge_to_activity[edge] == activity
-            ]
-            # Advance through this edge if no errors
-            if len(potential_edges) == 0:
-                # Error, the activity is not enabled in the current marking
-                raise RuntimeError(f"Error, '{activity}' is not enabled from marking with ID '{current_marking_id}'")
-            elif len(potential_edges) > 1:
-                # Error, should not be more than one edge incoming from the same marking with same activity label
-                raise RuntimeError(f"Error, multiple edges with same activity and source marking ({potential_edges})")
-            else:
-                # Correct, advance to target marking of edge
-                edge = potential_edges[0]
-                current_marking_id = self.edges[edge][1]
-        # Return last reached marking
-        return self.markings[current_marking_id]
+            next_marking_ids = set()
+            # Process each current marking
+            for current_marking_id in current_marking_ids:
+                # Retrieve edges leaving current marking with the activity as label
+                potential_edges = [
+                    edge
+                    for edge in self.outgoing_edges[current_marking_id]
+                    if self.edge_to_activity[edge] == activity
+                ]
+                # Advance through these edges if no errors
+                if len(potential_edges) > 0:
+                    # Correct, advance to target marking of each edge
+                    next_marking_ids |= {self.edges[edge][1] for edge in potential_edges}
+                else:
+                    # Error, the activity is not enabled in the current marking
+                    errors += [f"Error, '{activity}' is not enabled from marking with ID '{current_marking_id}'."]
+            # Replace current with next marking ids
+            current_marking_ids = next_marking_ids
+        # Raise error if all paths ended up in an error
+        if len(current_marking_ids) == 0:
+            raise RuntimeError("\n".join(errors))
+        # Return last reached marking(s)
+        return [self.markings[marking_id] for marking_id in current_marking_ids]
 
     def to_tgf_format(self):
         """

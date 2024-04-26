@@ -1,6 +1,13 @@
+from typing import List, Set, Tuple
+
 import pytest
 
 from process_running_state.reachability_graph import ReachabilityGraph
+from test_reachability_graph_fixtures import _simple_reachability_graph, _non_deterministic_reachability_graph
+
+
+def _prepare(markings: List[Set[str]]) -> Set[Tuple[str]]:
+    return {tuple(sorted(marking)) for marking in markings}
 
 
 def test_reachability_graph_model():
@@ -68,50 +75,62 @@ def test_reachability_graph_model():
     assert len(graph.markings) == 8
 
 
-def _instantiate_simple_graph() -> ReachabilityGraph:
-    graph = ReachabilityGraph()
-    graph.add_marking({"1"}, True)
-    graph.add_marking({"9", "6"})
-    graph.add_marking({"11", "6"})
-    graph.add_marking({"9", "15"})
-    graph.add_marking({"11", "15"})
-    graph.add_marking({"19"})
-    graph.add_edge("A", {"1"}, {"9", "6"})
-    graph.add_edge("B", {"9", "6"}, {"11", "6"})
-    graph.add_edge("B", {"11", "6"}, {"11", "6"})
-    graph.add_edge("B", {"9", "15"}, {"11", "15"})
-    graph.add_edge("B", {"11", "15"}, {"11", "15"})
-    graph.add_edge("C", {"9", "6"}, {"9", "15"})
-    graph.add_edge("C", {"11", "6"}, {"11", "15"})
-    graph.add_edge("D", {"11", "15"}, {"19"})
-    return graph
-
-
-def test_get_marking_from_activity_sequence():
+def test_get_markings_from_activity_sequence_simple():
     # Instantiate graph
-    graph = _instantiate_simple_graph()
+    graph = _simple_reachability_graph()
     # Assert replayable sequences
-    assert graph.get_marking_from_activity_sequence(["A", "B"]) == {"11", "6"}
-    assert graph.get_marking_from_activity_sequence(["A", "B", "B"]) == {"11", "6"}
-    assert graph.get_marking_from_activity_sequence(["A", "B", "C"]) == {"11", "15"}
-    assert graph.get_marking_from_activity_sequence(["A", "B", "C", "B"]) == {"11", "15"}
-    assert graph.get_marking_from_activity_sequence(["A", "B", "B", "C", "B", "B"]) == {"11", "15"}
-    assert graph.get_marking_from_activity_sequence(["A", "B", "C", "B", "B", "D"]) == {"19"}
-    assert graph.get_marking_from_activity_sequence(["A", "C", "B"]) == {"11", "15"}
-    assert graph.get_marking_from_activity_sequence(["A", "C", "B", "B", "B"]) == {"11", "15"}
-    assert graph.get_marking_from_activity_sequence(["A", "C", "B", "D"]) == {"19"}
+    assert graph.get_markings_from_activity_sequence(["A", "B"]) == [{"11", "6"}]
+    assert graph.get_markings_from_activity_sequence(["A", "B", "B"]) == [{"11", "6"}]
+    assert graph.get_markings_from_activity_sequence(["A", "B", "C"]) == [{"11", "15"}]
+    assert graph.get_markings_from_activity_sequence(["A", "B", "C", "B"]) == [{"11", "15"}]
+    assert graph.get_markings_from_activity_sequence(["A", "B", "B", "C", "B", "B"]) == [{"11", "15"}]
+    assert graph.get_markings_from_activity_sequence(["A", "B", "C", "B", "B", "D"]) == [{"19"}]
+    assert graph.get_markings_from_activity_sequence(["A", "C", "B"]) == [{"11", "15"}]
+    assert graph.get_markings_from_activity_sequence(["A", "C", "B", "B", "B"]) == [{"11", "15"}]
+    assert graph.get_markings_from_activity_sequence(["A", "C", "B", "D"]) == [{"19"}]
     # Assert sequences raising errors
     with pytest.raises(RuntimeError):
-        graph.get_marking_from_activity_sequence(["C"])
+        graph.get_markings_from_activity_sequence(["C"])
     with pytest.raises(RuntimeError):
-        graph.get_marking_from_activity_sequence(["A", "B", "C", "C"])
+        graph.get_markings_from_activity_sequence(["A", "B", "C", "C"])
     with pytest.raises(RuntimeError):
-        graph.get_marking_from_activity_sequence(["A", "B", "D"])
+        graph.get_markings_from_activity_sequence(["A", "B", "D"])
+
+
+def test_get_markings_from_activity_sequence_non_deterministic():
+    # Instantiate graph
+    graph = _non_deterministic_reachability_graph()
+    # Assert replayable sequences
+    assert graph.get_markings_from_activity_sequence(["A"]) == [{"10", "7"}]
+    assert graph.get_markings_from_activity_sequence(["A", "B"]) == [{"12", "7"}]
+    assert graph.get_markings_from_activity_sequence(["A", "B", "B"]) == [{"12", "7"}]
+    assert graph.get_markings_from_activity_sequence(["A", "C", "B"]) == [{"12", "17"}]
+    assert graph.get_markings_from_activity_sequence(["A", "C", "B", "C"]) == [{"10", "17"}]
+    assert graph.get_markings_from_activity_sequence(["A", "C", "B", "C", "B", "D"]) == [{"24"}]
+    assert _prepare(
+        graph.get_markings_from_activity_sequence(["A", "B", "B", "C", "B"])
+    ) == _prepare([{"12", "7"}, {"12", "17"}])
+    assert _prepare(
+        graph.get_markings_from_activity_sequence(["A", "B", "B", "C", "B", "B"])
+    ) == _prepare([{"12", "7"}, {"12", "17"}])
+    assert _prepare(
+        graph.get_markings_from_activity_sequence(["A", "B", "B", "C", "B", "C"])
+    ) == _prepare([{"12", "17"}, {"10", "17"}])
+    assert graph.get_markings_from_activity_sequence(["A", "B", "C", "B", "D"]) == [{"24"}]
+    # Assert sequences raising errors
+    with pytest.raises(RuntimeError):
+        graph.get_markings_from_activity_sequence(["C"])
+    with pytest.raises(RuntimeError):
+        graph.get_markings_from_activity_sequence(["A", "C", "C"])
+    with pytest.raises(RuntimeError):
+        graph.get_markings_from_activity_sequence(["A", "B", "C", "B", "A"])
+    with pytest.raises(RuntimeError):
+        graph.get_markings_from_activity_sequence(["A", "B", "C", "B", "D", "D"])
 
 
 def test_transformation_to_tgf():
     # Instantiate graph
-    graph = _instantiate_simple_graph()
+    graph = _simple_reachability_graph()
     # Transform into string
     tgf_string = graph.to_tgf_format()
     # Assert certain lines are in the string
