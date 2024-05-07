@@ -61,13 +61,13 @@ def compute_current_states():
             output_file.write("technique,case_id,state,runtime_avg,runtime_cnf\n")
             # Compute markings
             markovian_marking_3, runtime_avg, runtime_cnf = compute_markovian_marking(bpmn_model, 3)
-            output_file.write(f"build-marking-3,,,{runtime_avg}, {runtime_cnf}\n")
+            output_file.write(f"\"build-marking-3\",,,{runtime_avg}, {runtime_cnf}\n")
             markovian_marking_5, runtime_avg, runtime_cnf = compute_markovian_marking(bpmn_model, 5)
-            output_file.write(f"build-marking-5,,,{runtime_avg}, {runtime_cnf}\n")
+            output_file.write(f"\"build-marking-5\",,,{runtime_avg}, {runtime_cnf}\n")
             markovian_marking_7, runtime_avg, runtime_cnf = compute_markovian_marking(bpmn_model, 7)
-            output_file.write(f"build-marking-7,,,{runtime_avg}, {runtime_cnf}\n")
+            output_file.write(f"\"build-marking-7\",,,{runtime_avg}, {runtime_cnf}\n")
             markovian_marking_9, runtime_avg, runtime_cnf = compute_markovian_marking(bpmn_model, 9)
-            output_file.write(f"build-marking-9,,,{runtime_avg}, {runtime_cnf}\n")
+            output_file.write(f"\"build-marking-9\",,,{runtime_avg}, {runtime_cnf}\n")
             i = 0
             print("--- Computing with Prefix-Alignments ---\n")
             # Compute with alignments
@@ -77,17 +77,17 @@ def compute_current_states():
                 state, runtime_avg, runtime_cnf = get_state_prefix_alignment(trace, pnml_model, initial_marking,
                                                                              final_marking, AlignmentType.IASR,
                                                                              markovian_marking_3.graph)
-                output_file.write(f"IASR,{trace_id},{state},{runtime_avg}, {runtime_cnf}\n")
+                output_file.write(f"\"IASR\",\"{trace_id}\",\"{state}\",{runtime_avg}, {runtime_cnf}\n")
                 # A-star without recalculation
                 state, runtime_avg, runtime_cnf = get_state_prefix_alignment(trace, pnml_model, initial_marking,
                                                                              final_marking, AlignmentType.IAS,
                                                                              markovian_marking_3.graph)
-                output_file.write(f"IAS,{trace_id},{state},{runtime_avg}, {runtime_cnf}\n")
+                output_file.write(f"\"IAS\",\"{trace_id}\",\"{state}\",{runtime_avg}, {runtime_cnf}\n")
                 # OCC
                 state, runtime_avg, runtime_cnf = get_state_prefix_alignment(trace, pnml_model, initial_marking,
                                                                              final_marking, AlignmentType.OCC,
                                                                              markovian_marking_3.graph)
-                output_file.write(f"OCC,{trace_id},{state},{runtime_avg}, {runtime_cnf}\n")
+                output_file.write(f"\"OCC\",\"{trace_id}\",\"{state}\",{runtime_avg}, {runtime_cnf}\n")
                 i += 1
                 if i % 10 == 0 or i == log_size:
                     print(f"\tProcessed {i}/{log_size}\n")
@@ -99,16 +99,16 @@ def compute_current_states():
                 n_gram = list(events.tail(n)[log_ids.activity])
                 # 3-gram
                 state, runtime_avg, runtime_cnf = get_state_markovian_marking(markovian_marking_3, n_gram)
-                output_file.write(f"marking-3,{trace_id},{state},{runtime_avg}, {runtime_cnf}\n")
+                output_file.write(f"\"marking-3\",\"{trace_id}\",\"{state}\",{runtime_avg}, {runtime_cnf}\n")
                 # 5-gram
                 state, runtime_avg, runtime_cnf = get_state_markovian_marking(markovian_marking_5, n_gram)
-                output_file.write(f"marking-5,{trace_id},{state},{runtime_avg}, {runtime_cnf}\n")
+                output_file.write(f"\"marking-5\",\"{trace_id}\",\"{state}\",{runtime_avg}, {runtime_cnf}\n")
                 # 7-gram
                 state, runtime_avg, runtime_cnf = get_state_markovian_marking(markovian_marking_7, n_gram)
-                output_file.write(f"marking-7,{trace_id},{state},{runtime_avg}, {runtime_cnf}\n")
+                output_file.write(f"\"marking-7\",\"{trace_id}\",\"{state}\",{runtime_avg}, {runtime_cnf}\n")
                 # 9-gram
                 state, runtime_avg, runtime_cnf = get_state_markovian_marking(markovian_marking_9, n_gram)
-                output_file.write(f"marking-9,{trace_id},{state},{runtime_avg}, {runtime_cnf}\n")
+                output_file.write(f"\"marking-9\",\"{trace_id}\",\"{state}\",{runtime_avg}, {runtime_cnf}\n")
                 i += 1
                 if i % 10 == 0 or i == log_size:
                     print(f"\tProcessed {i}/{log_size}\n")
