@@ -1,21 +1,21 @@
 from pathlib import Path
 from random import randrange
+from typing import List
 
 import pandas as pd
 from pix_framework.io.event_log import DEFAULT_CSV_IDS, read_csv_log, DEFAULT_XES_IDS, EventLogIDs
 from pm4py.objects.log.exporter.xes.factory import export_log
 from pm4py.objects.log.importer.csv.versions.pandas_df_imp import convert_dataframe_to_event_log
 
+log_ids = DEFAULT_CSV_IDS
 
-def split_logs_into_ongoing_cases():
+
+def split_logs_into_ongoing_cases(datasets: List[str]):
     """
     Preprocess each event log to split their traces in the middle of their execution. Each event log is split
     into two event logs, one with the ongoing cases (events considered to be already executed), and another
     one with the remaining activities of each case (the events that were left out).
     """
-    # Instantiate datasets
-    datasets = ["sepsis_cases"]
-    log_ids = DEFAULT_CSV_IDS
     # For each dataset
     for dataset in datasets:
         # Instantiate paths
@@ -23,7 +23,6 @@ def split_logs_into_ongoing_cases():
         ongoing_cases_csv = Path(f"../outputs/{dataset}_ongoing.csv.gz")
         ongoing_cases_xes = f"../outputs/{dataset}_ongoing.xes"
         remaining_cases_csv = Path(f"../outputs/{dataset}_remaining.csv.gz")
-        remaining_cases_xes = f"../outputs/{dataset}_remaining.xes"
         # Read preprocessed event log(s)
         event_log = read_csv_log(event_log_path, log_ids, sort=True)
         # Create copy with ongoing cases and remaining activities
@@ -38,9 +37,8 @@ def split_logs_into_ongoing_cases():
             remaining_cases = pd.concat([remaining_cases, remaining_events])
         # Output datasets
         export_as_csv(ongoing_cases, ongoing_cases_csv)
-        export_as_xes(ongoing_cases, log_ids, ongoing_cases_xes)
+        # export_as_xes(ongoing_cases, ongoing_cases_xes)
         export_as_csv(remaining_cases, remaining_cases_csv)
-        export_as_xes(remaining_cases, log_ids, remaining_cases_xes)
 
 
 def compute_number_of_events_to_retain(events: pd.DataFrame) -> int:
@@ -59,7 +57,7 @@ def export_as_csv(event_log: pd.DataFrame, file_path: Path):
     event_log.to_csv(file_path, index=False)
 
 
-def export_as_xes(event_log: pd.DataFrame, log_ids: EventLogIDs, file_path: str):
+def export_as_xes(event_log: pd.DataFrame, file_path: str):
     event_log.rename(columns={
         log_ids.case: DEFAULT_XES_IDS.case,
         log_ids.activity: DEFAULT_XES_IDS.activity,
@@ -71,4 +69,6 @@ def export_as_xes(event_log: pd.DataFrame, log_ids: EventLogIDs, file_path: str)
 
 
 if __name__ == '__main__':
-    split_logs_into_ongoing_cases()
+    split_logs_into_ongoing_cases([
+        "synthetic_and_k5",
+    ])
