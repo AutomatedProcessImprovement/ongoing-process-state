@@ -7,6 +7,8 @@ import numpy as np
 import pandas as pd
 from pix_framework.io.event_log import DEFAULT_CSV_IDS, read_csv_log
 
+from icpm24_split_logs import export_as_csv, export_as_xes
+
 log_ids = DEFAULT_CSV_IDS
 
 
@@ -30,19 +32,19 @@ def add_noise_to_logs():
      - Three different random noise alterations per case.
     """
     # Instantiate datasets
-    datasets = ["synthetic_xor_loop", "synthetic_xor", "synthetic_and_kinf",
-                "synthetic_and_k7", "synthetic_and_k5_loop", "synthetic_and_k5",
-                "synthetic_and_k3"]
-    # datasets = ["synthetic_xor_loop_ongoing", "synthetic_xor_ongoing", "synthetic_and_kinf_ongoing",
-    #            "synthetic_and_k7_ongoing", "synthetic_and_k5_loop_ongoing", "synthetic_and_k5_ongoing",
-    #            "synthetic_and_k3_ongoing"]
+    datasets = ["synthetic_xor_loop_ongoing", "synthetic_xor_ongoing", "synthetic_and_kinf_ongoing",
+                "synthetic_and_k7_ongoing", "synthetic_and_k5_loop_ongoing", "synthetic_and_k5_ongoing",
+                "synthetic_and_k3_ongoing"]
     # For each dataset
     for dataset in datasets:
         # Instantiate paths
         event_log_path = Path(f"../inputs/synthetic/{dataset}.csv.gz")
-        noise_one_path = Path(f"../outputs/{dataset}_noise_1.csv.gz")
-        noise_two_path = Path(f"../outputs/{dataset}_noise_2.csv.gz")
-        noise_three_path = Path(f"../outputs/{dataset}_noise_3.csv.gz")
+        noise_one_path_csv = Path(f"../outputs/{dataset}_noise_1.csv.gz")
+        noise_one_path_xes = f"../outputs/{dataset}_noise_1.xes.gz"
+        noise_two_path_csv = Path(f"../outputs/{dataset}_noise_2.csv.gz")
+        noise_two_path_xes = f"../outputs/{dataset}_noise_2.xes.gz"
+        noise_three_path_csv = Path(f"../outputs/{dataset}_noise_3.csv.gz")
+        noise_three_path_xes = f"../outputs/{dataset}_noise_3.xes.gz"
         # Read preprocessed event log(s)
         event_log = read_csv_log(event_log_path, log_ids, sort=True)
         activities = list(event_log[log_ids.activity].unique())
@@ -72,9 +74,12 @@ def add_noise_to_logs():
             noise_three = trace_with_noise if noise_three is None else pd.concat([noise_three, trace_with_noise])
             print(f"\t{list(trace_with_noise.sort_values(log_ids.start_time)[log_ids.activity])}")
         # Output datasets
-        # noise_one.to_csv(noise_one_path, index=False)
-        # noise_two.to_csv(noise_two_path, index=False)
-        # noise_three.to_csv(noise_three_path, index=False)
+        export_as_csv(noise_one, noise_one_path_csv)
+        export_as_xes(noise_one, noise_one_path_xes)
+        export_as_csv(noise_two, noise_two_path_csv)
+        export_as_xes(noise_two, noise_two_path_xes)
+        export_as_csv(noise_three, noise_three_path_csv)
+        export_as_xes(noise_three, noise_three_path_xes)
 
 
 def _add_noise_to_trace(events: pd.DataFrame, noise_type: NoiseType, activities: List[str]) -> pd.DataFrame:
