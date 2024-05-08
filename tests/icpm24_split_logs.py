@@ -3,7 +3,7 @@ from random import randrange
 from typing import List
 
 import pandas as pd
-from pix_framework.io.event_log import DEFAULT_CSV_IDS, read_csv_log, DEFAULT_XES_IDS, EventLogIDs
+from pix_framework.io.event_log import DEFAULT_CSV_IDS, read_csv_log, DEFAULT_XES_IDS
 from pm4py.objects.log.exporter.xes.factory import export_log
 from pm4py.objects.log.importer.csv.versions.pandas_df_imp import convert_dataframe_to_event_log
 
@@ -19,7 +19,8 @@ def split_logs_into_ongoing_cases(datasets: List[str]):
     # For each dataset
     for dataset in datasets:
         # Instantiate paths
-        event_log_path = Path(f"../inputs/{dataset}.csv.gz")
+        event_log_path = Path(f"../inputs/real-life/{dataset}.csv.gz")
+        # event_log_path = Path(f"../inputs/synthetic/{dataset}.csv.gz")
         ongoing_cases_csv = Path(f"../outputs/{dataset}_ongoing.csv.gz")
         ongoing_cases_xes = f"../outputs/{dataset}_ongoing.xes"
         remaining_cases_csv = Path(f"../outputs/{dataset}_remaining.csv.gz")
@@ -37,7 +38,7 @@ def split_logs_into_ongoing_cases(datasets: List[str]):
             remaining_cases = pd.concat([remaining_cases, remaining_events])
         # Output datasets
         export_as_csv(ongoing_cases, ongoing_cases_csv)
-        # export_as_xes(ongoing_cases, ongoing_cases_xes)
+        export_as_xes(ongoing_cases, ongoing_cases_xes)
         export_as_csv(remaining_cases, remaining_cases_csv)
 
 
@@ -46,8 +47,8 @@ def compute_number_of_events_to_retain(events: pd.DataFrame) -> int:
     Return the number of events from a trace to retain as executed ones. The remaining
     ones will be considered as future events.
     """
-    left_padding = 5
-    right_padding = 3
+    left_padding = 3
+    right_padding = 1
     start = min(len(events), left_padding)
     stop = max(start, len(events) - right_padding)
     return randrange(start, stop + 1)  # randrange returns in [start, stop)
@@ -70,5 +71,16 @@ def export_as_xes(event_log: pd.DataFrame, file_path: str):
 
 if __name__ == '__main__':
     split_logs_into_ongoing_cases([
-        "synthetic_and_k5",
+        "BPIC12",
+        "BPIC13_cp",
+        "BPIC13_inc",
+        "BPIC14_f",
+        "BPIC15_1f",
+        "BPIC15_2f",
+        "BPIC15_3f",
+        "BPIC15_4f",
+        "BPIC15_5f",
+        "BPIC17f",
+        "RTFMP",
+        "SEPSIS",
     ])
