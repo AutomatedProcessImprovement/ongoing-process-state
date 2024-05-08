@@ -120,13 +120,13 @@ def compute_current_states(datasets: List[str]):
                 if i % 10 == 0 or i == log_size:
                     print(f"\tProcessed {i}/{log_size}\n")
             # Print total runtimes
-            output_file.write(f"\"total-runtime-IASR\",,,{total_iasr},,\n")
-            output_file.write(f"\"total-runtime-IAS\",,,{total_ias},,\n")
-            output_file.write(f"\"total-runtime-OCC\",,,{total_occ},,\n")
-            output_file.write(f"\"total-runtime-marking-3\",,,{total_3},,\n")
-            output_file.write(f"\"total-runtime-marking-5\",,,{total_5},,\n")
-            output_file.write(f"\"total-runtime-marking-7\",,,{total_7},,\n")
-            output_file.write(f"\"total-runtime-marking-9\",,,{total_9},,\n")
+            output_file.write(f"\"total-runtime-IASR\",,,{total_iasr},\n")
+            output_file.write(f"\"total-runtime-IAS\",,,{total_ias},\n")
+            output_file.write(f"\"total-runtime-OCC\",,,{total_occ},\n")
+            output_file.write(f"\"total-runtime-marking-3\",,,{total_3},\n")
+            output_file.write(f"\"total-runtime-marking-5\",,,{total_5},\n")
+            output_file.write(f"\"total-runtime-marking-7\",,,{total_7},\n")
+            output_file.write(f"\"total-runtime-marking-9\",,,{total_9},\n")
 
 
 def compute_markovian_marking(
