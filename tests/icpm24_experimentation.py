@@ -17,6 +17,7 @@ from process_running_state.reachability_graph import ReachabilityGraph
 from process_running_state.utils import read_bpmn_model
 
 number_of_runs = 10
+log_ids = DEFAULT_CSV_IDS
 
 
 class AlignmentType(Enum):
@@ -25,15 +26,12 @@ class AlignmentType(Enum):
     OCC = 2
 
 
-def compute_current_states():
+def compute_current_states(datasets: List[str]):
     """
     - Run both techniques, "our proposal" and "prefix-alignments", to compute the state of each ongoing process case.
     - Save the results in an intermediate CSV file storing the case ID, technique, ongoing state, avg runtime
     - In this way, the states can be reused later to evaluate any of the RQs.
     """
-    # Instantiate datasets
-    datasets = ["sepsis_cases"]
-    log_ids = DEFAULT_CSV_IDS
     # For each dataset
     for dataset in datasets:
         print(f"\n\n----- Processing dataset: {dataset} -----\n")
@@ -61,15 +59,16 @@ def compute_current_states():
             output_file.write("technique,case_id,state,runtime_avg,runtime_cnf\n")
             # Compute markings
             markovian_marking_3, runtime_avg, runtime_cnf = compute_markovian_marking(bpmn_model, 3)
-            output_file.write(f"\"build-marking-3\",,,{runtime_avg}, {runtime_cnf}\n")
+            output_file.write(f"\"build-marking-3\",,,{runtime_avg},{runtime_cnf}\n")
             markovian_marking_5, runtime_avg, runtime_cnf = compute_markovian_marking(bpmn_model, 5)
-            output_file.write(f"\"build-marking-5\",,,{runtime_avg}, {runtime_cnf}\n")
+            output_file.write(f"\"build-marking-5\",,,{runtime_avg},{runtime_cnf}\n")
             markovian_marking_7, runtime_avg, runtime_cnf = compute_markovian_marking(bpmn_model, 7)
-            output_file.write(f"\"build-marking-7\",,,{runtime_avg}, {runtime_cnf}\n")
+            output_file.write(f"\"build-marking-7\",,,{runtime_avg},{runtime_cnf}\n")
             markovian_marking_9, runtime_avg, runtime_cnf = compute_markovian_marking(bpmn_model, 9)
-            output_file.write(f"\"build-marking-9\",,,{runtime_avg}, {runtime_cnf}\n")
+            output_file.write(f"\"build-marking-9\",,,{runtime_avg},{runtime_cnf}\n")
             i = 0
             print("--- Computing with Prefix-Alignments ---\n")
+            total_iasr, total_ias, total_occ = 0, 0, 0
             # Compute with alignments
             for trace in event_log_xes:
                 trace_id = trace.attributes['concept:name']
@@ -77,41 +76,57 @@ def compute_current_states():
                 state, runtime_avg, runtime_cnf = get_state_prefix_alignment(trace, pnml_model, initial_marking,
                                                                              final_marking, AlignmentType.IASR,
                                                                              markovian_marking_3.graph)
+                total_iasr += runtime_avg
                 output_file.write(f"\"IASR\",\"{trace_id}\",\"{state}\",{runtime_avg}, {runtime_cnf}\n")
                 # A-star without recalculation
                 state, runtime_avg, runtime_cnf = get_state_prefix_alignment(trace, pnml_model, initial_marking,
                                                                              final_marking, AlignmentType.IAS,
                                                                              markovian_marking_3.graph)
+                total_ias += runtime_avg
                 output_file.write(f"\"IAS\",\"{trace_id}\",\"{state}\",{runtime_avg}, {runtime_cnf}\n")
                 # OCC
                 state, runtime_avg, runtime_cnf = get_state_prefix_alignment(trace, pnml_model, initial_marking,
                                                                              final_marking, AlignmentType.OCC,
                                                                              markovian_marking_3.graph)
+                total_occ += runtime_avg
                 output_file.write(f"\"OCC\",\"{trace_id}\",\"{state}\",{runtime_avg}, {runtime_cnf}\n")
                 i += 1
                 if i % 10 == 0 or i == log_size:
                     print(f"\tProcessed {i}/{log_size}\n")
             i = 0
             print("--- Computing with N-Gram Indexing ---\n")
+            total_3, total_5, total_7, total_9 = 0, 0, 0, 0
             # Compute with our proposal
             for trace_id, events in event_log_csv.groupby(log_ids.case):
                 n = min(len(events), 9)
                 n_gram = list(events.tail(n)[log_ids.activity])
                 # 3-gram
                 state, runtime_avg, runtime_cnf = get_state_markovian_marking(markovian_marking_3, n_gram)
+                total_3 += runtime_avg
                 output_file.write(f"\"marking-3\",\"{trace_id}\",\"{state}\",{runtime_avg}, {runtime_cnf}\n")
                 # 5-gram
                 state, runtime_avg, runtime_cnf = get_state_markovian_marking(markovian_marking_5, n_gram)
+                total_5 += runtime_avg
                 output_file.write(f"\"marking-5\",\"{trace_id}\",\"{state}\",{runtime_avg}, {runtime_cnf}\n")
                 # 7-gram
                 state, runtime_avg, runtime_cnf = get_state_markovian_marking(markovian_marking_7, n_gram)
+                total_7 += runtime_avg
                 output_file.write(f"\"marking-7\",\"{trace_id}\",\"{state}\",{runtime_avg}, {runtime_cnf}\n")
                 # 9-gram
                 state, runtime_avg, runtime_cnf = get_state_markovian_marking(markovian_marking_9, n_gram)
+                total_9 += runtime_avg
                 output_file.write(f"\"marking-9\",\"{trace_id}\",\"{state}\",{runtime_avg}, {runtime_cnf}\n")
                 i += 1
                 if i % 10 == 0 or i == log_size:
                     print(f"\tProcessed {i}/{log_size}\n")
+            # Print total runtimes
+            output_file.write(f"\"total-runtime-IASR\",,,{total_iasr},,\n")
+            output_file.write(f"\"total-runtime-IAS\",,,{total_ias},,\n")
+            output_file.write(f"\"total-runtime-OCC\",,,{total_occ},,\n")
+            output_file.write(f"\"total-runtime-marking-3\",,,{total_3},,\n")
+            output_file.write(f"\"total-runtime-marking-5\",,,{total_5},,\n")
+            output_file.write(f"\"total-runtime-marking-7\",,,{total_7},,\n")
+            output_file.write(f"\"total-runtime-marking-9\",,,{total_9},,\n")
 
 
 def compute_markovian_marking(
@@ -212,4 +227,12 @@ def compute_mean_conf_interval(data: list, confidence: float = 0.95) -> Tuple[fl
 
 
 if __name__ == '__main__':
-    compute_current_states()
+    compute_current_states([
+        # "synthetic_and_k3",
+        # "synthetic_and_k5",
+        ## "synthetic_and_k5_loop",  # Alignment fails dunno why
+        "synthetic_and_k7",
+        # "synthetic_and_kinf",
+        # "synthetic_xor",
+        # "synthetic_xor_loop",
+    ])
