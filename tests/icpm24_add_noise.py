@@ -22,7 +22,7 @@ class NoiseType(enum.Enum):
         return list(np.random.choice([NoiseType.ADD, NoiseType.REMOVE, NoiseType.SWAP], amount, replace=False))
 
 
-def add_noise_to_logs():
+def add_noise_to_logs(datasets: List[str]):
     """
     Preprocess each event log by adding noise to each case. The possible noise modifications are: i) add an activity
     instance, ii) remove an activity instance, iii) swap two activity instances. Produce three event logs with added
@@ -31,14 +31,12 @@ def add_noise_to_logs():
      - Two different random noise alterations per case.
      - Three different random noise alterations per case.
     """
-    # Instantiate datasets
-    datasets = ["synthetic_xor_loop_ongoing", "synthetic_xor_ongoing", "synthetic_and_kinf_ongoing",
-                "synthetic_and_k7_ongoing", "synthetic_and_k5_loop_ongoing", "synthetic_and_k5_ongoing",
-                "synthetic_and_k3_ongoing"]
     # For each dataset
     for dataset in datasets:
+        print(f"\n--- Processing {dataset} ---\n")
         # Instantiate paths
-        event_log_path = Path(f"../inputs/synthetic/{dataset}.csv.gz")
+        event_log_path = Path(f"../inputs/real-life/{dataset}.csv.gz")
+        # event_log_path = Path(f"../inputs/synthetic/{dataset}.csv.gz")
         noise_one_path_csv = Path(f"../outputs/{dataset}_noise_1.csv.gz")
         noise_one_path_xes = f"../outputs/{dataset}_noise_1.xes.gz"
         noise_two_path_csv = Path(f"../outputs/{dataset}_noise_2.csv.gz")
@@ -51,20 +49,17 @@ def add_noise_to_logs():
         # Create copy for each noise
         noise_one, noise_two, noise_three = None, None, None
         for trace_id, events in event_log.groupby(log_ids.case):
-            print(f"{trace_id}\n{list(events.sort_values(log_ids.start_time)[log_ids.activity])}")
             # Add noise for noise_one
             events_one = events.copy(deep=True)
             types = NoiseType.random(1)
             trace_with_noise = _add_noise_to_trace(events_one, types[0], activities)
             noise_one = trace_with_noise if noise_one is None else pd.concat([noise_one, trace_with_noise])
-            print(f"\t{list(trace_with_noise.sort_values(log_ids.start_time)[log_ids.activity])}")
             # Add noise for noise_two
             events_two = events.copy(deep=True)
             types = NoiseType.random(2)
             trace_with_noise = _add_noise_to_trace(events_two, types[0], activities)
             trace_with_noise = _add_noise_to_trace(trace_with_noise, types[1], activities)
             noise_two = trace_with_noise if noise_two is None else pd.concat([noise_two, trace_with_noise])
-            print(f"\t{list(trace_with_noise.sort_values(log_ids.start_time)[log_ids.activity])}")
             # Add noise for noise_three
             events_three = events.copy(deep=True)
             types = NoiseType.random(3)
@@ -72,7 +67,6 @@ def add_noise_to_logs():
             trace_with_noise = _add_noise_to_trace(trace_with_noise, types[1], activities)
             trace_with_noise = _add_noise_to_trace(trace_with_noise, types[2], activities)
             noise_three = trace_with_noise if noise_three is None else pd.concat([noise_three, trace_with_noise])
-            print(f"\t{list(trace_with_noise.sort_values(log_ids.start_time)[log_ids.activity])}")
         # Output datasets
         export_as_csv(noise_one, noise_one_path_csv)
         export_as_xes(noise_one, noise_one_path_xes)
@@ -137,4 +131,17 @@ def _add_noise_to_trace(events: pd.DataFrame, noise_type: NoiseType, activities:
 
 
 if __name__ == '__main__':
-    add_noise_to_logs()
+    add_noise_to_logs([
+        "BPIC12_ongoing",
+        "BPIC13_cp_ongoing",
+        "BPIC13_inc_ongoing",
+        "BPIC14f_ongoing",
+        "BPIC15_1f_ongoing",
+        "BPIC15_2f_ongoing",
+        "BPIC15_3f_ongoing",
+        "BPIC15_4f_ongoing",
+        "BPIC15_5f_ongoing",
+        "BPIC17f_ongoing",
+        "RTFMP_ongoing",
+        "SEPSIS_ongoing",
+    ])
