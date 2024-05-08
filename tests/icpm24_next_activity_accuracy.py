@@ -1,5 +1,6 @@
 import ast
 from pathlib import Path
+from typing import List
 
 import pandas as pd
 from pix_framework.io.event_log import read_csv_log, DEFAULT_CSV_IDS
@@ -9,9 +10,7 @@ from process_running_state.reachability_graph import ReachabilityGraph
 log_ids = DEFAULT_CSV_IDS
 
 
-def evaluation_question_one():
-    # Instantiate datasets
-    datasets = ["sepsis_cases"]
+def next_activity_accuracy(datasets: List[str]):
     # For each dataset
     for dataset in datasets:
         print(f"\n--- Dataset: {dataset} ---\n")
@@ -69,4 +68,4 @@ def evaluate_state_approximation(
 
 
 if __name__ == '__main__':
-    evaluation_question_one()
+    next_activity_accuracy(["sepsis_cases"])
