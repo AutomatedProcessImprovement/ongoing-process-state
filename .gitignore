@@ -130,6 +130,7 @@ dmypy.json
 
 # custom ignores
 /outputs/
+/results/
 .idea/
 poetry.lock
 .DS_Store
