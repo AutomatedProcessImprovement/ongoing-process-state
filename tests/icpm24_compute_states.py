@@ -36,10 +36,11 @@ def compute_current_states(datasets: List[str]):
     for dataset in datasets:
         print(f"\n\n----- Processing dataset: {dataset} -----\n")
         # Instantiate paths
-        ongoing_cases_csv = Path(f"../inputs/{dataset}_ongoing.csv.gz")
-        ongoing_cases_xes = f"../inputs/{dataset}_ongoing.xes.gz"
-        bpmn_model_path = Path(f"../inputs/{dataset}.bpmn")
-        pnml_model_path = Path(f"../inputs/{dataset}.pnml")
+        #  - For synthetic logs, adapt "input" paths for each of the noise levels (e.g., '/inputs/synthetic/original/')
+        ongoing_cases_csv = Path(f"../inputs/real-life/{dataset}_ongoing.csv.gz")
+        ongoing_cases_xes = f"../inputs/real-life/{dataset}_ongoing.xes.gz"
+        bpmn_model_path = Path(f"../inputs/real-life/{dataset}.bpmn")
+        pnml_model_path = Path(f"../inputs/real-life/{dataset}.pnml")
         output_filename = Path(f"../outputs/{dataset}_ongoing_states.csv")
         reachability_graph_path = Path(f"../outputs/{dataset}_reachability_graph.tgf")
         # Read preprocessed event log(s)
@@ -185,7 +186,8 @@ def get_state_prefix_alignment(
                 for element in result['alignment']
                 if element['name'][1] != '>>' and element['label'][1] is not None
             ]
-            state = reachability_graph.get_marking_from_activity_sequence(model_movements)
+            states = reachability_graph.get_markings_from_activity_sequence(model_movements)
+            state = np.random.choice(states, 1)  # If non deterministic process, then random state
     # Compute runtime confidence interval
     runtime_avg, runtime_cnf = compute_mean_conf_interval(runtimes)
     return state, runtime_avg, runtime_cnf
@@ -228,11 +230,10 @@ def compute_mean_conf_interval(data: list, confidence: float = 0.95) -> Tuple[fl
 
 if __name__ == '__main__':
     compute_current_states([
-        # "synthetic_and_k3",
-        # "synthetic_and_k5",
-        ## "synthetic_and_k5_loop",  # Alignment fails dunno why
+        "synthetic_and_k3",
+        "synthetic_and_k5",
         "synthetic_and_k7",
-        # "synthetic_and_kinf",
-        # "synthetic_xor",
-        # "synthetic_xor_loop",
+        "synthetic_and_kinf",
+        "synthetic_xor",
+        "synthetic_xor_loop",
     ])
