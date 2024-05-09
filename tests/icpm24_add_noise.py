@@ -38,11 +38,11 @@ def add_noise_to_logs(datasets: List[str]):
         event_log_path = Path(f"../inputs/real-life/{dataset}.csv.gz")
         # event_log_path = Path(f"../inputs/synthetic/{dataset}.csv.gz")
         noise_one_path_csv = Path(f"../outputs/{dataset}_noise_1.csv.gz")
-        noise_one_path_xes = f"../outputs/{dataset}_noise_1.xes.gz"
+        noise_one_path_xes = f"../outputs/{dataset}_noise_1.xes"
         noise_two_path_csv = Path(f"../outputs/{dataset}_noise_2.csv.gz")
-        noise_two_path_xes = f"../outputs/{dataset}_noise_2.xes.gz"
+        noise_two_path_xes = f"../outputs/{dataset}_noise_2.xes"
         noise_three_path_csv = Path(f"../outputs/{dataset}_noise_3.csv.gz")
-        noise_three_path_xes = f"../outputs/{dataset}_noise_3.xes.gz"
+        noise_three_path_xes = f"../outputs/{dataset}_noise_3.xes"
         # Read preprocessed event log(s)
         event_log = read_csv_log(event_log_path, log_ids, sort=True)
         activities = list(event_log[log_ids.activity].unique())
