@@ -46,8 +46,15 @@ def compute_number_of_events_to_retain(events: pd.DataFrame) -> int:
     """
     Return the number of events from a trace to retain as executed ones. The remaining
     ones will be considered as future events.
+
+    (left_padding=3, right_padding=0) for synthetic logs for the noise edits to be
+    possible (REMOVE - SWAP requires at least 3 events to be performed).
+
+    (left_padding=1, right_padding=1) for real-life logs because it would be trivial
+    to estimate the state for an empty start (initial marking), and one remaining
+    activity needed to evaluate the estimation (is next activity enabled?).
     """
-    left_padding = 3
+    left_padding = 1
     right_padding = 1
     start = min(len(events), left_padding)
     stop = max(start, len(events) - right_padding)
