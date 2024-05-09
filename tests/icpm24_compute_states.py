@@ -58,14 +58,25 @@ def compute_current_states(datasets: List[str]):
             print("--- Computing N-Gram indexes ---\n")
             # Write headers
             output_file.write("technique,case_id,state,runtime_avg,runtime_cnf\n")
-            # Compute markings
+            # Compute & export marking for 3-gram
             markovian_marking_3, runtime_avg, runtime_cnf = compute_markovian_marking(bpmn_model, 3)
+            with open(three_gram_index_path, "w") as n_gram_index_file:
+                n_gram_index_file.write(markovian_marking_3.to_self_contained_string_map())
             output_file.write(f"\"build-marking-3\",,,{runtime_avg},{runtime_cnf}\n")
+            # Compute & export marking for 5-gram
             markovian_marking_5, runtime_avg, runtime_cnf = compute_markovian_marking(bpmn_model, 5)
+            with open(five_gram_index_path, "w") as n_gram_index_file:
+                n_gram_index_file.write(markovian_marking_5.to_self_contained_string_map())
             output_file.write(f"\"build-marking-5\",,,{runtime_avg},{runtime_cnf}\n")
+            # Compute & export marking for 7-gram
             markovian_marking_7, runtime_avg, runtime_cnf = compute_markovian_marking(bpmn_model, 7)
+            with open(seven_gram_index_path, "w") as n_gram_index_file:
+                n_gram_index_file.write(markovian_marking_7.to_self_contained_string_map())
             output_file.write(f"\"build-marking-7\",,,{runtime_avg},{runtime_cnf}\n")
+            # Compute & export marking for 10-gram
             markovian_marking_10, runtime_avg, runtime_cnf = compute_markovian_marking(bpmn_model, 10)
+            with open(ten_gram_index_path, "w") as n_gram_index_file:
+                n_gram_index_file.write(markovian_marking_10.to_self_contained_string_map())
             output_file.write(f"\"build-marking-10\",,,{runtime_avg},{runtime_cnf}\n")
             i = 0
             print("--- Computing with Prefix-Alignments ---\n")
