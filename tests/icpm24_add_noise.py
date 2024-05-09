@@ -35,8 +35,7 @@ def add_noise_to_logs(datasets: List[str]):
     for dataset in datasets:
         print(f"\n--- Processing {dataset} ---\n")
         # Instantiate paths
-        event_log_path = Path(f"../inputs/real-life/{dataset}.csv.gz")
-        # event_log_path = Path(f"../inputs/synthetic/{dataset}.csv.gz")
+        event_log_path = Path(f"../inputs/synthetic/{dataset}.csv.gz")
         noise_one_path_csv = Path(f"../outputs/{dataset}_noise_1.csv.gz")
         noise_one_path_xes = f"../outputs/{dataset}_noise_1.xes"
         noise_two_path_csv = Path(f"../outputs/{dataset}_noise_2.csv.gz")
@@ -99,27 +98,20 @@ def _add_noise_to_trace(events: pd.DataFrame, noise_type: NoiseType, activities:
         added_event = events.loc[previous_idx].copy(deep=True)
         added_event[log_ids.activity] = activity_label
         added_event[log_ids.resource] = "ADDED_RESOURCE"
-        # Get future events and displace them 1 second forward
+        # Get future events and displace them 5 seconds forward
         events.loc[
-            events[log_ids.start_time] >= added_event[log_ids.start_time].iloc[0],
+            events[log_ids.end_time] >= added_event[log_ids.end_time].iloc[0],
             [log_ids.end_time]
         ] += pd.Timedelta(seconds=5)
-        events.loc[
-            events[log_ids.start_time] >= added_event[log_ids.start_time].iloc[0],
-            [log_ids.start_time]
-        ] += pd.Timedelta(seconds=5)
-        # Reset start/end of copied event
-        events.loc[previous_idx, log_ids.start_time] = added_event[log_ids.start_time]
+        # Reset end of copied event
         events.loc[previous_idx, log_ids.end_time] = added_event[log_ids.end_time]
-        # Set timestamps of added event to one second after previous event finished
-        added_event[log_ids.start_time] = added_event[log_ids.end_time]
+        # Set timestamp of added event to five seconds after previous event finished
         added_event[log_ids.end_time] = added_event[log_ids.end_time] + pd.Timedelta(seconds=5)
         # Add new event to trace
         events = pd.concat([events, added_event]).reset_index(drop=True)
     elif noise_type == NoiseType.SWAP and len(events) > 1:
         # Get index of two consecutive events
         i = np.random.randint(0, len(events) - 1)
-        events.sort_values(by=log_ids.start_time, inplace=True)
         event_one_idx = events.index[i]
         event_two_idx = events.index[i + 1]
         # Swap activity labels
@@ -132,16 +124,10 @@ def _add_noise_to_trace(events: pd.DataFrame, noise_type: NoiseType, activities:
 
 if __name__ == '__main__':
     add_noise_to_logs([
-        "BPIC12_ongoing",
-        "BPIC13_cp_ongoing",
-        "BPIC13_inc_ongoing",
-        "BPIC14f_ongoing",
-        "BPIC15_1f_ongoing",
-        "BPIC15_2f_ongoing",
-        "BPIC15_3f_ongoing",
-        "BPIC15_4f_ongoing",
-        "BPIC15_5f_ongoing",
-        "BPIC17f_ongoing",
-        "RTFMP_ongoing",
-        "SEPSIS_ongoing",
+        "synthetic_and_k3",
+        "synthetic_and_k5",
+        "synthetic_and_k7",
+        "synthetic_and_kinf",
+        "synthetic_xor_loop",
+        "synthetic_xor_sequence",
     ])
