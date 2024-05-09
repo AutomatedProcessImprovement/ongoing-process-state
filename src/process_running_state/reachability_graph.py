@@ -74,7 +74,7 @@ class ReachabilityGraph:
         # Return last reached marking(s)
         return [self.markings[marking_id] for marking_id in current_marking_ids]
 
-    def to_tgf_format(self):
+    def to_tgf_format(self) -> str:
         """
         Stores the reachability graph in a string following the Trivial Graph Format. As a reachability graph is a
         directed graph where the nodes store a marking (set of IDs) and the edges the name of an activity, the label
