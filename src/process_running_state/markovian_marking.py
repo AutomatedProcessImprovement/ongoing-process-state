@@ -9,7 +9,7 @@ class MarkovianMarking:
     def __init__(self, graph: ReachabilityGraph, n_gram_size_limit: int = 5):
         self.graph = graph
         self.n_gram_size_limit = n_gram_size_limit
-        self.markings = {}  # Dict with the N-Gram (tuple) as key and list with marking(s) as value
+        self.markings = {}  # Dict with the N-Gram (tuple) as key and list with marking ID(s) as value
 
     def add_associations(self, n_gram: List[str], markings: Set[str]):
         n_gram_key = tuple(n_gram)
@@ -121,3 +121,17 @@ class MarkovianMarking:
                     marking_stack += [marking_id]
                     n_gram_stack += [previous_n_gram]
                     target_marking_stack += [target_marking]
+
+    def get_self_contained_map(self) -> dict:
+        return {
+            key: [self.graph.markings[marking] for marking in self.markings[key]]
+            for key in self.markings
+        }
+
+    def to_self_contained_string_map(self) -> str:
+        string_map = ""
+        self_contained_map = self.get_self_contained_map()
+        for key in self_contained_map:
+            string_map += f"{str(key)} -> {str(self_contained_map[key])}\n"
+        # Return map in string format
+        return string_map
