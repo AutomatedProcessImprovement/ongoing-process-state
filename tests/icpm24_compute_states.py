@@ -1,7 +1,7 @@
 import time
 from enum import Enum
 from pathlib import Path
-from typing import Tuple, List, Set
+from typing import Tuple, List, Set, Optional
 
 import numpy as np
 from pix_framework.io.event_log import read_csv_log, DEFAULT_CSV_IDS
@@ -26,7 +26,7 @@ class AlignmentType(Enum):
     OCC = 2
 
 
-def compute_current_states(datasets: List[str]):
+def compute_current_states(datasets: List[str], noise: Optional[str] = None):
     """
     - Run both techniques, "our proposal" and "prefix-alignments", to compute the state of each ongoing process case.
     - Save the results in an intermediate CSV file storing the case ID, technique, ongoing state, avg runtime
@@ -37,12 +37,26 @@ def compute_current_states(datasets: List[str]):
         print(f"\n\n----- Processing dataset: {dataset} -----\n")
         # Instantiate paths
         #  - For synthetic logs, adapt "input" paths for each of the noise levels (e.g., '/inputs/synthetic/original/')
-        ongoing_cases_csv = Path(f"../inputs/real-life/{dataset}_ongoing.csv.gz")
-        ongoing_cases_xes = f"../inputs/real-life/{dataset}_ongoing.xes.gz"
-        bpmn_model_path = Path(f"../inputs/real-life/{dataset}.bpmn")
-        pnml_model_path = Path(f"../inputs/real-life/{dataset}.pnml")
-        output_filename = Path(f"../outputs/{dataset}_ongoing_states.csv")
-        reachability_graph_path = Path(f"../outputs/{dataset}_reachability_graph.tgf")
+        if noise is None:
+            ongoing_cases_csv = Path(f"../inputs/synthetic/split/{dataset}_ongoing.csv.gz")
+            ongoing_cases_xes = f"../inputs/synthetic/split/{dataset}_ongoing.xes.gz"
+            output_filename = Path(f"../outputs/{dataset}_ongoing_states.csv")
+            reachability_graph_path = Path(f"../outputs/{dataset}_reachability_graph.tgf")
+            three_gram_index_path = Path(f"../outputs/{dataset}_3_gram_index.index")
+            five_gram_index_path = Path(f"../outputs/{dataset}_5_gram_index.index")
+            seven_gram_index_path = Path(f"../outputs/{dataset}_7_gram_index.index")
+            ten_gram_index_path = Path(f"../outputs/{dataset}_10_gram_index.index")
+        else:
+            ongoing_cases_csv = Path(f"../inputs/synthetic/{noise}/{dataset}_ongoing_{noise}.csv.gz")
+            ongoing_cases_xes = f"../inputs/synthetic/{noise}/{dataset}_ongoing_{noise}.xes.gz"
+            output_filename = Path(f"../outputs/{dataset}_{noise}_ongoing_states.csv")
+            reachability_graph_path = Path(f"../outputs/{dataset}_{noise}_reachability_graph.tgf")
+            three_gram_index_path = Path(f"../outputs/{dataset}_{noise}_3_gram_index.index")
+            five_gram_index_path = Path(f"../outputs/{dataset}_{noise}_5_gram_index.index")
+            seven_gram_index_path = Path(f"../outputs/{dataset}_{noise}_7_gram_index.index")
+            ten_gram_index_path = Path(f"../outputs/{dataset}_{noise}_10_gram_index.index")
+        bpmn_model_path = Path(f"../inputs/synthetic/{dataset}.bpmn")
+        pnml_model_path = Path(f"../inputs/synthetic/{dataset}.pnml")
         # Read preprocessed event log(s)
         event_log_xes = xes_import_factory.apply(ongoing_cases_xes)
         event_log_csv = read_csv_log(ongoing_cases_csv, log_ids, sort=True)
@@ -115,19 +129,19 @@ def compute_current_states(datasets: List[str]):
                 # 3-gram
                 state, runtime_avg, runtime_cnf = get_state_markovian_marking(markovian_marking_3, n_gram)
                 total_3 += runtime_avg
-                output_file.write(f"\"marking-3\",\"{trace_id}\",\"{state}\",{runtime_avg}, {runtime_cnf}\n")
+                output_file.write(f"\"marking-3\",\"{trace_id}\",\"{state}\",{runtime_avg},{runtime_cnf}\n")
                 # 5-gram
                 state, runtime_avg, runtime_cnf = get_state_markovian_marking(markovian_marking_5, n_gram)
                 total_5 += runtime_avg
-                output_file.write(f"\"marking-5\",\"{trace_id}\",\"{state}\",{runtime_avg}, {runtime_cnf}\n")
+                output_file.write(f"\"marking-5\",\"{trace_id}\",\"{state}\",{runtime_avg},{runtime_cnf}\n")
                 # 7-gram
                 state, runtime_avg, runtime_cnf = get_state_markovian_marking(markovian_marking_7, n_gram)
                 total_7 += runtime_avg
-                output_file.write(f"\"marking-7\",\"{trace_id}\",\"{state}\",{runtime_avg}, {runtime_cnf}\n")
+                output_file.write(f"\"marking-7\",\"{trace_id}\",\"{state}\",{runtime_avg},{runtime_cnf}\n")
                 # 10-gram
                 state, runtime_avg, runtime_cnf = get_state_markovian_marking(markovian_marking_10, n_gram)
                 total_10 += runtime_avg
-                output_file.write(f"\"marking-10\",\"{trace_id}\",\"{state}\",{runtime_avg}, {runtime_cnf}\n")
+                output_file.write(f"\"marking-10\",\"{trace_id}\",\"{state}\",{runtime_avg},{runtime_cnf}\n")
                 i += 1
                 if i % 10 == 0 or i == log_size:
                     print(f"\tProcessed {i}/{log_size}\n")
@@ -248,3 +262,27 @@ if __name__ == '__main__':
         "synthetic_xor_sequence",
         "synthetic_xor_loop",
     ])
+    compute_current_states([
+        "synthetic_and_k3",
+        "synthetic_and_k5",
+        "synthetic_and_k7",
+        "synthetic_and_kinf",
+        "synthetic_xor_sequence",
+        "synthetic_xor_loop",
+    ], "noise_1")
+    compute_current_states([
+        "synthetic_and_k3",
+        "synthetic_and_k5",
+        "synthetic_and_k7",
+        "synthetic_and_kinf",
+        "synthetic_xor_sequence",
+        "synthetic_xor_loop",
+    ], "noise_2")
+    compute_current_states([
+        "synthetic_and_k3",
+        "synthetic_and_k5",
+        "synthetic_and_k7",
+        "synthetic_and_kinf",
+        "synthetic_xor_sequence",
+        "synthetic_xor_loop",
+    ], "noise_3")
