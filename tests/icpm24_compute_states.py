@@ -187,7 +187,7 @@ def get_state_prefix_alignment(
                 if element['name'][1] != '>>' and element['label'][1] is not None
             ]
             states = reachability_graph.get_markings_from_activity_sequence(model_movements)
-            state = np.random.choice(states, 1)  # If non deterministic process, then random state
+            state = np.random.choice(states, 1)[0]  # If non-deterministic process, then random state
     # Compute runtime confidence interval
     runtime_avg, runtime_cnf = compute_mean_conf_interval(runtimes)
     return state, runtime_avg, runtime_cnf
