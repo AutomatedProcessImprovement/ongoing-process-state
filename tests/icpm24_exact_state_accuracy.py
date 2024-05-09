@@ -24,7 +24,7 @@ def exact_state_accuracy(datasets: List[str]):
         with open(reachability_graph_path, "r") as reachability_graph_file:
             reachability_graph = ReachabilityGraph.from_tgf_format(reachability_graph_file.read())
         # Go over each case ID
-        iasr, ias, occ, mark3, mark5, mark7, mark9 = [], [], [], [], [], [], []
+        iasr, ias, occ, mark3, mark5, mark7, mark10 = [], [], [], [], [], [], []
         for case_id, data in computed_states.groupby("case_id"):
             # Compute real state(s)
             real_states = reachability_graph.get_markings_from_activity_sequence(
@@ -39,7 +39,7 @@ def exact_state_accuracy(datasets: List[str]):
             mark3 += [evaluate_state_approximation(data, "marking-3", real_state)]
             mark5 += [evaluate_state_approximation(data, "marking-5", real_state)]
             mark7 += [evaluate_state_approximation(data, "marking-7", real_state)]
-            mark9 += [evaluate_state_approximation(data, "marking-9", real_state)]
+            mark10 += [evaluate_state_approximation(data, "marking-10", real_state)]
         # Print stats
         print("IASR:   {:.2f} ({:.2f})".format(
             sum(iasr) / len(iasr),
@@ -65,9 +65,9 @@ def exact_state_accuracy(datasets: List[str]):
             sum(mark7) / len(mark7),
             sum([value for value in mark7 if value == 1.0]) / len(mark7)
         ))
-        print("mark-9: {:.2f} ({:.2f})\n".format(
-            sum(mark9) / len(mark9),
-            sum([value for value in mark9 if value == 1.0]) / len(mark9)
+        print("mark-10: {:.2f} ({:.2f})\n".format(
+            sum(mark10) / len(mark10),
+            sum([value for value in mark10 if value == 1.0]) / len(mark10)
         ))
 
 
@@ -88,6 +88,6 @@ if __name__ == '__main__':
         "synthetic_and_k5",
         "synthetic_and_k7",
         "synthetic_and_kinf",
-        "synthetic_xor",
+        "synthetic_xor_sequence",
         "synthetic_xor_loop",
     ])

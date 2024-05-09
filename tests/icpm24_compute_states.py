@@ -65,8 +65,8 @@ def compute_current_states(datasets: List[str]):
             output_file.write(f"\"build-marking-5\",,,{runtime_avg},{runtime_cnf}\n")
             markovian_marking_7, runtime_avg, runtime_cnf = compute_markovian_marking(bpmn_model, 7)
             output_file.write(f"\"build-marking-7\",,,{runtime_avg},{runtime_cnf}\n")
-            markovian_marking_9, runtime_avg, runtime_cnf = compute_markovian_marking(bpmn_model, 9)
-            output_file.write(f"\"build-marking-9\",,,{runtime_avg},{runtime_cnf}\n")
+            markovian_marking_10, runtime_avg, runtime_cnf = compute_markovian_marking(bpmn_model, 10)
+            output_file.write(f"\"build-marking-10\",,,{runtime_avg},{runtime_cnf}\n")
             i = 0
             print("--- Computing with Prefix-Alignments ---\n")
             total_iasr, total_ias, total_occ = 0, 0, 0
@@ -96,10 +96,10 @@ def compute_current_states(datasets: List[str]):
                     print(f"\tProcessed {i}/{log_size}\n")
             i = 0
             print("--- Computing with N-Gram Indexing ---\n")
-            total_3, total_5, total_7, total_9 = 0, 0, 0, 0
+            total_3, total_5, total_7, total_10 = 0, 0, 0, 0
             # Compute with our proposal
             for trace_id, events in event_log_csv.groupby(log_ids.case):
-                n = min(len(events), 9)
+                n = min(len(events), 10)
                 n_gram = list(events.tail(n)[log_ids.activity])
                 # 3-gram
                 state, runtime_avg, runtime_cnf = get_state_markovian_marking(markovian_marking_3, n_gram)
@@ -113,10 +113,10 @@ def compute_current_states(datasets: List[str]):
                 state, runtime_avg, runtime_cnf = get_state_markovian_marking(markovian_marking_7, n_gram)
                 total_7 += runtime_avg
                 output_file.write(f"\"marking-7\",\"{trace_id}\",\"{state}\",{runtime_avg}, {runtime_cnf}\n")
-                # 9-gram
-                state, runtime_avg, runtime_cnf = get_state_markovian_marking(markovian_marking_9, n_gram)
-                total_9 += runtime_avg
-                output_file.write(f"\"marking-9\",\"{trace_id}\",\"{state}\",{runtime_avg}, {runtime_cnf}\n")
+                # 10-gram
+                state, runtime_avg, runtime_cnf = get_state_markovian_marking(markovian_marking_10, n_gram)
+                total_10 += runtime_avg
+                output_file.write(f"\"marking-10\",\"{trace_id}\",\"{state}\",{runtime_avg}, {runtime_cnf}\n")
                 i += 1
                 if i % 10 == 0 or i == log_size:
                     print(f"\tProcessed {i}/{log_size}\n")
@@ -127,7 +127,7 @@ def compute_current_states(datasets: List[str]):
             output_file.write(f"\"total-runtime-marking-3\",,,{total_3},\n")
             output_file.write(f"\"total-runtime-marking-5\",,,{total_5},\n")
             output_file.write(f"\"total-runtime-marking-7\",,,{total_7},\n")
-            output_file.write(f"\"total-runtime-marking-9\",,,{total_9},\n")
+            output_file.write(f"\"total-runtime-marking-10\",,,{total_10},\n")
 
 
 def compute_markovian_marking(
@@ -234,6 +234,6 @@ if __name__ == '__main__':
         "synthetic_and_k5",
         "synthetic_and_k7",
         "synthetic_and_kinf",
-        "synthetic_xor",
+        "synthetic_xor_sequence",
         "synthetic_xor_loop",
     ])
