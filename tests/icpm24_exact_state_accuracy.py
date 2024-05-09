@@ -1,6 +1,6 @@
 import ast
 from pathlib import Path
-from typing import List, Set
+from typing import List, Set, Optional
 
 import pandas as pd
 from pix_framework.io.event_log import read_csv_log, DEFAULT_CSV_IDS
@@ -8,16 +8,22 @@ from pix_framework.io.event_log import read_csv_log, DEFAULT_CSV_IDS
 from process_running_state.reachability_graph import ReachabilityGraph
 
 log_ids = DEFAULT_CSV_IDS
+output_file_path = Path(f"../outputs/synthetic_accuracy.csv")
 
 
-def exact_state_accuracy(datasets: List[str]):
+def compute_state_accuracy(datasets: List[str], noise: Optional[str] = None):
     # For each dataset
     for dataset in datasets:
-        print(f"\n--- Dataset: {dataset} ---\n")
         # Instantiate paths
-        ongoing_cases_path = Path(f"../inputs/synthetic/original/{dataset}_ongoing.csv.gz")
-        computed_states_path = Path(f"../results/{dataset}_ongoing_states.csv")
-        reachability_graph_path = Path(f"../results/{dataset}_reachability_graph.tgf")
+        ongoing_cases_path = Path(f"../inputs/synthetic/split/{dataset}_ongoing.csv.gz")
+        if noise is None:
+            print(f"\n--- Dataset: {dataset} ---\n")
+            computed_states_path = Path(f"../results/{dataset}_ongoing_states.csv")
+            reachability_graph_path = Path(f"../results/{dataset}_reachability_graph.tgf")
+        else:
+            print(f"\n--- Dataset: {dataset} ({noise}) ---\n")
+            computed_states_path = Path(f"../results/{dataset}_{noise}_ongoing_states.csv")
+            reachability_graph_path = Path(f"../results/{dataset}_{noise}_reachability_graph.tgf")
         # Read event log, computed states, and reachability graph
         ongoing_cases = read_csv_log(ongoing_cases_path, log_ids, sort=True)
         computed_states = pd.read_csv(computed_states_path, quotechar="\"")
@@ -41,34 +47,26 @@ def exact_state_accuracy(datasets: List[str]):
             mark7 += [evaluate_state_approximation(data, "marking-7", real_state)]
             mark10 += [evaluate_state_approximation(data, "marking-10", real_state)]
         # Print stats
-        print("IASR:   {:.2f} ({:.2f})".format(
-            sum(iasr) / len(iasr),
-            sum([value for value in iasr if value == 1.0]) / len(iasr)
-        ))
-        print("IAS:    {:.2f} ({:.2f})".format(
-            sum(ias) / len(ias),
-            sum([value for value in ias if value == 1.0]) / len(ias)
-        ))
-        print("OCC:    {:.2f} ({:.2f})".format(
-            sum(occ) / len(occ),
-            sum([value for value in occ if value == 1.0]) / len(occ)
-        ))
-        print("mark-3: {:.2f} ({:.2f})".format(
-            sum(mark3) / len(mark3),
-            sum([value for value in mark3 if value == 1.0]) / len(mark3)
-        ))
-        print("mark-5: {:.2f} ({:.2f})".format(
-            sum(mark5) / len(mark5),
-            sum([value for value in mark5 if value == 1.0]) / len(mark5)
-        ))
-        print("mark-7: {:.2f} ({:.2f})".format(
-            sum(mark7) / len(mark7),
-            sum([value for value in mark7 if value == 1.0]) / len(mark7)
-        ))
-        print("mark-10: {:.2f} ({:.2f})\n".format(
-            sum(mark10) / len(mark10),
-            sum([value for value in mark10 if value == 1.0]) / len(mark10)
-        ))
+        full_dataset_name = dataset if noise is None else f"{dataset}_{noise}"
+        _output_summarized_results(full_dataset_name, "IASR", iasr)
+        _output_summarized_results(full_dataset_name, "IAS", ias)
+        _output_summarized_results(full_dataset_name, "OCC", occ)
+        _output_summarized_results(full_dataset_name, "mark-3", mark3)
+        _output_summarized_results(full_dataset_name, "mark-5", mark5)
+        _output_summarized_results(full_dataset_name, "mark-7", mark7)
+        _output_summarized_results(full_dataset_name, "mark-10", mark10)
+
+
+def _output_summarized_results(dataset: str, technique: str, results: List[float]):
+    with open(output_file_path, "a") as output_file:
+        output_file.write(
+            f"{dataset},"
+            f"{technique},"
+            f"{len([value for value in results if value == 1.0])},"
+            f"{len(results)},"
+            f"{sum([value for value in results if value == 1.0]) / len(results)},"
+            f"{sum(results) / len(results)}\n"
+        )
 
 
 def evaluate_state_approximation(
@@ -82,12 +80,34 @@ def evaluate_state_approximation(
     return len(marking & real_marking) / max(len(marking), len(real_marking))
 
 
+def _create_output_file():
+    with open(output_file_path, "w") as output_file:
+        output_file.write("dataset,technique,abs_full_matches,num_cases,rel_full_matches,abs_partial_matches\n")
+
+
 if __name__ == '__main__':
-    exact_state_accuracy([
-        "synthetic_and_k3",
-        "synthetic_and_k5",
-        "synthetic_and_k7",
-        "synthetic_and_kinf",
-        "synthetic_xor_sequence",
-        "synthetic_xor_loop",
-    ])
+    # Create output metrics path
+    _create_output_file()
+    # Process results without noise
+    compute_state_accuracy(
+        ["synthetic_and_k3", "synthetic_and_k5", "synthetic_and_k7",
+         "synthetic_and_kinf", "synthetic_xor_sequence", "synthetic_xor_loop"]
+    )
+    # Process results with noise lvl 1
+    compute_state_accuracy(
+        ["synthetic_and_k3", "synthetic_and_k5", "synthetic_and_k7",
+         "synthetic_and_kinf", "synthetic_xor_sequence", "synthetic_xor_loop"],
+        "noise_1"
+    )
+    # Process results with noise lvl 2
+    compute_state_accuracy(
+        ["synthetic_and_k3", "synthetic_and_k5", "synthetic_and_k7",
+         "synthetic_and_kinf", "synthetic_xor_sequence", "synthetic_xor_loop"],
+        "noise_2"
+    )
+    # Process results with noise lvl 3
+    compute_state_accuracy(
+        ["synthetic_and_k3", "synthetic_and_k5", "synthetic_and_k7",
+         "synthetic_and_kinf", "synthetic_xor_sequence", "synthetic_xor_loop"],
+        "noise_3"
+    )
