@@ -35,7 +35,7 @@ def add_noise_to_logs(datasets: List[str]):
     for dataset in datasets:
         print(f"\n--- Processing {dataset} ---\n")
         # Instantiate paths
-        event_log_path = Path(f"../inputs/synthetic/{dataset}.csv.gz")
+        event_log_path = Path(f"../inputs/synthetic/split/{dataset}.csv.gz")
         noise_one_path_csv = Path(f"../outputs/{dataset}_noise_1.csv.gz")
         noise_one_path_xes = f"../outputs/{dataset}_noise_1.xes"
         noise_two_path_csv = Path(f"../outputs/{dataset}_noise_2.csv.gz")
@@ -124,10 +124,10 @@ def _add_noise_to_trace(events: pd.DataFrame, noise_type: NoiseType, activities:
 
 if __name__ == '__main__':
     add_noise_to_logs([
-        "synthetic_and_k3",
-        "synthetic_and_k5",
-        "synthetic_and_k7",
-        "synthetic_and_kinf",
-        "synthetic_xor_loop",
-        "synthetic_xor_sequence",
+        "synthetic_and_k3_ongoing",
+        "synthetic_and_k5_ongoing",
+        "synthetic_and_k7_ongoing",
+        "synthetic_and_kinf_ongoing",
+        "synthetic_xor_loop_ongoing",
+        "synthetic_xor_sequence_ongoing",
     ])
