@@ -257,7 +257,7 @@ if __name__ == '__main__':
     compute_current_states([
         "synthetic_and_k3",
         "synthetic_and_k5",
-        "synthetic_and_k7",
+        "synthetic_and_k10",
         "synthetic_and_kinf",
         "synthetic_xor_sequence",
         "synthetic_xor_loop",
@@ -265,7 +265,7 @@ if __name__ == '__main__':
     compute_current_states([
         "synthetic_and_k3",
         "synthetic_and_k5",
-        "synthetic_and_k7",
+        "synthetic_and_k10",
         "synthetic_and_kinf",
         "synthetic_xor_sequence",
         "synthetic_xor_loop",
@@ -273,7 +273,7 @@ if __name__ == '__main__':
     compute_current_states([
         "synthetic_and_k3",
         "synthetic_and_k5",
-        "synthetic_and_k7",
+        "synthetic_and_k10",
         "synthetic_and_kinf",
         "synthetic_xor_sequence",
         "synthetic_xor_loop",
@@ -281,7 +281,7 @@ if __name__ == '__main__':
     compute_current_states([
         "synthetic_and_k3",
         "synthetic_and_k5",
-        "synthetic_and_k7",
+        "synthetic_and_k10",
         "synthetic_and_kinf",
         "synthetic_xor_sequence",
         "synthetic_xor_loop",

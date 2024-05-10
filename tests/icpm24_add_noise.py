@@ -126,7 +126,7 @@ if __name__ == '__main__':
     add_noise_to_logs([
         "synthetic_and_k3_ongoing",
         "synthetic_and_k5_ongoing",
-        "synthetic_and_k7_ongoing",
+        "synthetic_and_k10_ongoing",
         "synthetic_and_kinf_ongoing",
         "synthetic_xor_loop_ongoing",
         "synthetic_xor_sequence_ongoing",

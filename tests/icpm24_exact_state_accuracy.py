@@ -90,24 +90,24 @@ if __name__ == '__main__':
     _create_output_file()
     # Process results without noise
     compute_state_accuracy(
-        ["synthetic_and_k3", "synthetic_and_k5", "synthetic_and_k7",
+        ["synthetic_and_k3", "synthetic_and_k5", "synthetic_and_k10",
          "synthetic_and_kinf", "synthetic_xor_sequence", "synthetic_xor_loop"]
     )
     # Process results with noise lvl 1
     compute_state_accuracy(
-        ["synthetic_and_k3", "synthetic_and_k5", "synthetic_and_k7",
+        ["synthetic_and_k3", "synthetic_and_k5", "synthetic_and_k10",
          "synthetic_and_kinf", "synthetic_xor_sequence", "synthetic_xor_loop"],
         "noise_1"
     )
     # Process results with noise lvl 2
     compute_state_accuracy(
-        ["synthetic_and_k3", "synthetic_and_k5", "synthetic_and_k7",
+        ["synthetic_and_k3", "synthetic_and_k5", "synthetic_and_k10",
          "synthetic_and_kinf", "synthetic_xor_sequence", "synthetic_xor_loop"],
         "noise_2"
     )
     # Process results with noise lvl 3
     compute_state_accuracy(
-        ["synthetic_and_k3", "synthetic_and_k5", "synthetic_and_k7",
+        ["synthetic_and_k3", "synthetic_and_k5", "synthetic_and_k10",
          "synthetic_and_kinf", "synthetic_xor_sequence", "synthetic_xor_loop"],
         "noise_3"
     )
