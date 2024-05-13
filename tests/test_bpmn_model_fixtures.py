@@ -263,3 +263,27 @@ def _bpmn_model_with_loop_inside_parallel_and_loop_all_back() -> BPMNModel:
     bpmn_model.add_flow("22", "flow", "20", "23")
     bpmn_model.add_flow("24", "flow", "23", "25")
     return bpmn_model
+
+
+def _bpmn_model_with_infinite_loop() -> BPMNModel:
+    bpmn_model = BPMNModel()
+    bpmn_model.add_event(BPMNNodeType.START_EVENT, "0", "Start")
+    bpmn_model.add_event(BPMNNodeType.END_EVENT, "18", "End")
+    bpmn_model.add_task("2", "A")
+    bpmn_model.add_task("8", "B")
+    bpmn_model.add_task("16", "C")
+    bpmn_model.add_gateway(BPMNNodeType.EXCLUSIVE_GATEWAY, "6", "XOR-split")
+    bpmn_model.add_gateway(BPMNNodeType.EXCLUSIVE_GATEWAY, "10", "XOR-join")
+    bpmn_model.add_gateway(BPMNNodeType.EXCLUSIVE_GATEWAY, "13", "XOR-split")
+    bpmn_model.add_gateway(BPMNNodeType.EXCLUSIVE_GATEWAY, "4", "XOR-join")
+    bpmn_model.add_flow("1", "flow", "0", "2")
+    bpmn_model.add_flow("3", "flow", "2", "4")
+    bpmn_model.add_flow("5", "flow", "4", "6")
+    bpmn_model.add_flow("7", "flow", "6", "8")
+    bpmn_model.add_flow("9", "flow", "8", "10")
+    bpmn_model.add_flow("11", "flow", "6", "10")
+    bpmn_model.add_flow("12", "flow", "10", "13")
+    bpmn_model.add_flow("14", "flow", "13", "4")
+    bpmn_model.add_flow("15", "flow", "13", "16")
+    bpmn_model.add_flow("17", "flow", "16", "18")
+    return bpmn_model
