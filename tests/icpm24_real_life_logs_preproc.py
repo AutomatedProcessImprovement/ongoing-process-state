@@ -110,17 +110,28 @@ def print_stats(event_log: pd.DataFrame, log_ids: EventLogIDs):
     number_cases = len(event_log[log_ids.case].unique())
     number_activities = len(event_log[log_ids.activity].unique())
     number_activity_instances = len(event_log)
-    minimum_lenght = min([len(events) for case_id, events in event_log.groupby(log_ids.case)])
-    median_lenght = np.median([len(events) for case_id, events in event_log.groupby(log_ids.case)])
+    lengths = [len(events) for case_id, events in event_log.groupby(log_ids.case)]
+    minimum_lenght = min(lengths)
+    median_lenght = np.median(lengths)
     average_lenght = round(number_activity_instances / number_cases)
-    maximum_lenght = max([len(events) for case_id, events in event_log.groupby(log_ids.case)])
+    maximum_lenght = max(lengths)
+    num_len_1 = len([length for length in lengths if length == 1])
+    num_len_2 = len([length for length in lengths if length == 2])
+    num_len_3 = len([length for length in lengths if length == 3])
+    num_len_4 = len([length for length in lengths if length == 4])
+    num_len_5 = len([length for length in lengths if length == 5])
     print(f"\tCases: {number_cases}\n"
           f"\tActivities: {number_activities}\n"
           f"\tActivity Instances: {number_activity_instances}\n"
           f"\tMin length: {minimum_lenght}\n"
           f"\tMedian length: {median_lenght}\n"
           f"\tAvg length: {average_lenght}\n"
-          f"\tMax length: {maximum_lenght}\n\n")
+          f"\tMax length: {maximum_lenght}\n"
+          f"\t#Cases len 1: {num_len_1} ({round(num_len_1 / number_cases, 2)}%)\n"
+          f"\t#Cases len 2: {num_len_2} ({round(num_len_2 / number_cases, 2)}%)\n"
+          f"\t#Cases len 3: {num_len_3} ({round(num_len_3 / number_cases, 2)}%)\n"
+          f"\t#Cases len 4: {num_len_4} ({round(num_len_4 / number_cases, 2)}%)\n"
+          f"\t#Cases len 5: {num_len_5} ({round(num_len_5 / number_cases, 2)}%)\n\n")
 
 
 if __name__ == '__main__':
@@ -139,7 +150,6 @@ if __name__ == '__main__':
         "BPIC_2020_PrepaidTravelCost",
         "BPIC_2020_RequestForPayment",
         "BPIC_2020_TravelPermitData",
-        "Road_Traffic_Fine_Management_Process",
         "Sepsis_Cases",
     ])
     read_and_process_bpic_2013()
