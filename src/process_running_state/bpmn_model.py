@@ -439,6 +439,7 @@ class BPMNModel:
             reference_marking_stack += [initial_reference_marking]
         # Start exploration, for each "reference" marking, simulate in its corresponding advanced markings
         explored_markings = set()
+        explored_reference_markings = set()
         while len(advanced_marking_stack) > 0:
             # Retrieve current markings
             current_marking = advanced_marking_stack.pop()  # The marking to simulate over
@@ -460,16 +461,21 @@ class BPMNModel:
                         if len(advanced) > 0 and advanced.issubset(new_reference_marking):
                             original = reference_marking - current_marking
                             new_reference_marking = new_reference_marking - advanced | original
-                        # Advance the marking as much as possible (executing any enabled gateway)
-                        new_advanced_markings = self.advance_full_marking(new_reference_marking)
-                        # For each new marking
-                        for new_advanced_marking in new_advanced_markings:
-                            # Update reachability graph
-                            graph.add_marking(new_reference_marking)  # Add reference marking to graph
-                            graph.add_edge(enabled_node.name, reference_marking, new_reference_marking)
-                            # Save new marking
-                            advanced_marking_stack += [new_advanced_marking]
-                            reference_marking_stack += [new_reference_marking]
+                        # Update reachability graph
+                        graph.add_marking(new_reference_marking)  # Add reference marking to graph
+                        graph.add_edge(enabled_node.name, reference_marking, new_reference_marking)
+                        # If the new_reference_marking was already advanced, no need to repeat
+                        new_reference_marking_key = tuple(sorted(new_reference_marking))
+                        if new_reference_marking_key not in explored_reference_markings:
+                            # Add it to explored
+                            explored_reference_markings.add(new_reference_marking_key)
+                            # Advance the marking as much as possible (executing any enabled gateway)
+                            new_advanced_markings = self.advance_full_marking(new_reference_marking)
+                            # For each new marking
+                            for new_advanced_marking in new_advanced_markings:
+                                # Save new marking
+                                advanced_marking_stack += [new_advanced_marking]
+                                reference_marking_stack += [new_reference_marking]
         # Return reachability graph
         return graph
 
