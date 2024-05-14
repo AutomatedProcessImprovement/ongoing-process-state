@@ -3,6 +3,7 @@ from process_running_state.bpmn_model import BPMNModel, BPMNNodeType
 
 def _bpmn_model_with_AND_and_XOR() -> BPMNModel:
     bpmn_model = BPMNModel()
+    bpmn_model._cached_search = False
     bpmn_model.add_event(BPMNNodeType.START_EVENT, "0", "Start")
     bpmn_model.add_event(BPMNNodeType.END_EVENT, "24", "End")
     bpmn_model.add_task("2", "A")
@@ -33,6 +34,7 @@ def _bpmn_model_with_AND_and_XOR() -> BPMNModel:
 
 def _bpmn_model_with_XOR_within_AND() -> BPMNModel:
     bpmn_model = BPMNModel()
+    bpmn_model._cached_search = False
     bpmn_model.add_event(BPMNNodeType.START_EVENT, "0", "Start")
     bpmn_model.add_event(BPMNNodeType.END_EVENT, "39", "End")
     bpmn_model.add_task("2", "A")
@@ -78,6 +80,7 @@ def _bpmn_model_with_XOR_within_AND() -> BPMNModel:
 
 def _bpmn_model_with_AND_and_nested_XOR() -> BPMNModel:
     bpmn_model = BPMNModel()
+    bpmn_model._cached_search = False
     bpmn_model.add_event(BPMNNodeType.START_EVENT, "0", "Start")
     bpmn_model.add_event(BPMNNodeType.END_EVENT, "25", "End")
     bpmn_model.add_task("2", "A")
@@ -111,6 +114,7 @@ def _bpmn_model_with_AND_and_nested_XOR() -> BPMNModel:
 
 def _bpmn_model_with_loop_inside_AND() -> BPMNModel:
     bpmn_model = BPMNModel()
+    bpmn_model._cached_search = False
     bpmn_model.add_event(BPMNNodeType.START_EVENT, "0", "Start")
     bpmn_model.add_event(BPMNNodeType.END_EVENT, "20", "End")
     bpmn_model.add_task("2", "A")
@@ -137,6 +141,7 @@ def _bpmn_model_with_loop_inside_AND() -> BPMNModel:
 
 def _bpmn_model_with_two_loops_inside_AND_followed_by_XOR_within_AND() -> BPMNModel:
     bpmn_model = BPMNModel()
+    bpmn_model._cached_search = False
     bpmn_model.add_event(BPMNNodeType.START_EVENT, "0", "Start")
     bpmn_model.add_event(BPMNNodeType.END_EVENT, "46", "End")
     bpmn_model.add_task("2", "A")
@@ -191,6 +196,7 @@ def _bpmn_model_with_two_loops_inside_AND_followed_by_XOR_within_AND() -> BPMNMo
 
 def _bpmn_model_with_three_loops_inside_AND_two_of_them_inside_sub_AND() -> BPMNModel:
     bpmn_model = BPMNModel()
+    bpmn_model._cached_search = False
     bpmn_model.add_event(BPMNNodeType.START_EVENT, "0", "Start")
     bpmn_model.add_event(BPMNNodeType.END_EVENT, "39", "End")
     bpmn_model.add_task("5", "A")
@@ -236,6 +242,7 @@ def _bpmn_model_with_three_loops_inside_AND_two_of_them_inside_sub_AND() -> BPMN
 
 def _bpmn_model_with_loop_inside_parallel_and_loop_all_back() -> BPMNModel:
     bpmn_model = BPMNModel()
+    bpmn_model._cached_search = False
     bpmn_model.add_event(BPMNNodeType.START_EVENT, "0", "Start")
     bpmn_model.add_event(BPMNNodeType.END_EVENT, "25", "End")
     bpmn_model.add_task("2", "A")
@@ -267,6 +274,7 @@ def _bpmn_model_with_loop_inside_parallel_and_loop_all_back() -> BPMNModel:
 
 def _bpmn_model_with_infinite_loop() -> BPMNModel:
     bpmn_model = BPMNModel()
+    bpmn_model._cached_search = False
     bpmn_model.add_event(BPMNNodeType.START_EVENT, "0", "Start")
     bpmn_model.add_event(BPMNNodeType.END_EVENT, "18", "End")
     bpmn_model.add_task("2", "A")

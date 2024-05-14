@@ -81,6 +81,9 @@ class BPMNModel:
         self.id_to_node: Dict[str, Node] = dict()
         self.flows: Set[Flow] = set()
         self.id_to_flow: Dict[str, Flow] = dict()
+        # Params for cached reachability graph search
+        self._cached_search: bool = True
+        self._advance_marking_cache = dict()
 
     def add_task(self, task_id: str, task_name: str):
         if task_id not in self.id_to_node:
@@ -293,44 +296,52 @@ class BPMNModel:
         :param marking: marking to consider as starting point to perform the advance operation.
         :return: list with the different markings result of such advancement.
         """
-        # Initialize breath-first search list
-        current_markings = [marking]
-        explored_markings = set()
-        final_markings = []
-        # Run propagation until no more gateways can be fired
-        while current_markings:
-            next_markings = []
-            # For each marking
-            for current_marking in current_markings:
-                # If it hasn't been explored
-                marking_key = tuple(sorted(current_marking))
-                if marking_key not in explored_markings:
-                    # Add it to explored
-                    explored_markings.add(marking_key)
-                    # Get enabled gateways
-                    enabled_gateways = [
-                        node_id
-                        for node_id in self.get_enabled_nodes(current_marking) if
-                        self.id_to_node[node_id].is_gateway()
-                    ]
-                    # If no enabled gateways, save fully advanced marking
-                    if len(enabled_gateways) == 0:
-                        final_markings += [current_marking]
-                    else:
-                        # Otherwise, execute one of the enabled gateways and save result for next iteration
-                        gateway_id = enabled_gateways.pop()
-                        gateway = self.id_to_node[gateway_id]
-                        if (gateway.is_AND() or gateway.is_OR()) and gateway.is_split():
-                            # AND-split/OR-split: traverse it
-                            advanced_markings = self.simulate_execution(gateway_id, current_marking)
-                            # For each advanced markings (after gateway split)
-                            for advanced_marking in advanced_markings:
-                                final_markings += self.advance_full_marking(advanced_marking)
+        # If result in cache, retrieve, otherwise compute
+        marking_key = tuple(sorted(marking))
+        if self._cached_search and marking_key in self._advance_marking_cache:
+            final_markings = self._advance_marking_cache[marking_key]
+        else:
+            # Initialize breath-first search list
+            current_markings = [marking]
+            explored_markings = set()
+            final_markings = []
+            # Run propagation until no more gateways can be fired
+            while current_markings:
+                next_markings = []
+                # For each marking
+                for current_marking in current_markings:
+                    # If it hasn't been explored
+                    current_marking_key = tuple(sorted(current_marking))
+                    if current_marking_key not in explored_markings:
+                        # Add it to explored
+                        explored_markings.add(current_marking_key)
+                        # Get enabled gateways
+                        enabled_gateways = [
+                            node_id
+                            for node_id in self.get_enabled_nodes(current_marking) if
+                            self.id_to_node[node_id].is_gateway()
+                        ]
+                        # If no enabled gateways, save fully advanced marking
+                        if len(enabled_gateways) == 0:
+                            final_markings += [current_marking]
                         else:
-                            # JOINs or XOR-split, execute and continue with advancement
-                            next_markings += self.simulate_execution(gateway_id, current_marking)
-            # Update new marking stack
-            current_markings = next_markings
+                            # Otherwise, execute one of the enabled gateways and save result for next iteration
+                            gateway_id = enabled_gateways.pop()
+                            gateway = self.id_to_node[gateway_id]
+                            if (gateway.is_AND() or gateway.is_OR()) and gateway.is_split():
+                                # AND-split/OR-split: traverse it
+                                advanced_markings = self.simulate_execution(gateway_id, current_marking)
+                                # For each advanced markings (after gateway split)
+                                for advanced_marking in advanced_markings:
+                                    final_markings += self.advance_full_marking(advanced_marking)
+                            else:
+                                # JOINs or XOR-split, execute and continue with advancement
+                                next_markings += self.simulate_execution(gateway_id, current_marking)
+                # Update new marking stack
+                current_markings = next_markings
+            # Save if using cache
+            if self._cached_search:
+                self._advance_marking_cache[marking_key] = final_markings
         # Return final set
         return final_markings
 
@@ -418,7 +429,7 @@ class BPMNModel:
         # Return final markings
         return final_markings
 
-    def get_reachability_graph(self) -> ReachabilityGraph:
+    def get_reachability_graph(self, cached_search: bool = True) -> ReachabilityGraph:
         """
         Compute the reachability graph of this BPMN model. Each marking in the reachability graph contains the enabled
         flows of that state, and corresponds to a state of the process where the only enabled elements are tasks,
@@ -426,6 +437,8 @@ class BPMNModel:
 
         :return: the reachability graph of this BPMN model.
         """
+        self._cached_search = cached_search
+        self._advance_marking_cache = dict()
         # Get initial BPMN marking and instantiate reachability graph
         initial_marking = self.get_initial_marking()
         initial_reference_marking = self.advance_marking_until_decision_point(initial_marking)

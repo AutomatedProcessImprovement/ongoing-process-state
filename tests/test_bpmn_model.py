@@ -258,7 +258,7 @@ def test_advance_full_marking_triple_loop_model():
 
 def test_reachability_graph_simple():
     bpmn_model = _bpmn_model_with_AND_and_XOR()
-    reachability_graph = bpmn_model.get_reachability_graph()
+    reachability_graph = bpmn_model.get_reachability_graph(cached_search=False)
     # Assert general sizes
     assert len(reachability_graph.markings) == 7
     assert len(reachability_graph.edges) == 8
@@ -279,7 +279,7 @@ def test_reachability_graph_simple():
 
 def test_reachability_graph_XOR_within_AND():
     bpmn_model = _bpmn_model_with_XOR_within_AND()
-    reachability_graph = bpmn_model.get_reachability_graph()
+    reachability_graph = bpmn_model.get_reachability_graph(cached_search=False)
     # Assert general sizes
     assert len(reachability_graph.markings) == 10
     assert len(reachability_graph.edges) == 26
@@ -321,7 +321,7 @@ def test_reachability_graph_XOR_within_AND():
 
 def test_reachability_graph_nested_XOR():
     bpmn_model = _bpmn_model_with_AND_and_nested_XOR()
-    reachability_graph = bpmn_model.get_reachability_graph()
+    reachability_graph = bpmn_model.get_reachability_graph(cached_search=False)
     # Assert general sizes
     assert len(reachability_graph.markings) == 6
     assert len(reachability_graph.edges) == 10
@@ -350,7 +350,7 @@ def test_reachability_graph_nested_XOR():
 
 def test_reachability_graph_loop_model():
     bpmn_model = _bpmn_model_with_loop_inside_AND()
-    reachability_graph = bpmn_model.get_reachability_graph()
+    reachability_graph = bpmn_model.get_reachability_graph(cached_search=False)
     # Assert general sizes
     assert len(reachability_graph.markings) == 6
     assert len(reachability_graph.edges) == 8
@@ -376,7 +376,7 @@ def test_reachability_graph_loop_model():
 
 def test_reachability_graph_double_loop_model():
     bpmn_model = _bpmn_model_with_two_loops_inside_AND_followed_by_XOR_within_AND()
-    reachability_graph = bpmn_model.get_reachability_graph()
+    reachability_graph = bpmn_model.get_reachability_graph(cached_search=False)
     # Assert general sizes
     assert len(reachability_graph.markings) == 9
     assert len(reachability_graph.edges) == 18
@@ -416,7 +416,7 @@ def test_reachability_graph_double_loop_model():
 
 def test_reachability_graph_triple_loop_model():
     bpmn_model = _bpmn_model_with_three_loops_inside_AND_two_of_them_inside_sub_AND()
-    reachability_graph = bpmn_model.get_reachability_graph()
+    reachability_graph = bpmn_model.get_reachability_graph(cached_search=False)
     # Assert general sizes
     assert len(reachability_graph.markings) == 13
     assert len(reachability_graph.edges) == 33
@@ -487,7 +487,7 @@ def test_reachability_graph_triple_loop_model():
 
 def test_reachability_graph_loop_inside_parallel_and_loop_all_back():
     bpmn_model = _bpmn_model_with_loop_inside_parallel_and_loop_all_back()
-    reachability_graph = bpmn_model.get_reachability_graph()
+    reachability_graph = bpmn_model.get_reachability_graph(cached_search=False)
     # Assert general sizes
     assert len(reachability_graph.markings) == 6
     assert len(reachability_graph.edges) == 10
@@ -520,7 +520,7 @@ def test_reachability_graph_loop_inside_parallel_and_loop_all_back():
 
 def test_reachability_graph_infinite_loop():
     bpmn_model = _bpmn_model_with_infinite_loop()
-    reachability_graph = bpmn_model.get_reachability_graph()
+    reachability_graph = bpmn_model.get_reachability_graph(cached_search=False)
     # Assert general sizes
     assert len(reachability_graph.markings) == 4
     assert len(reachability_graph.edges) == 5
@@ -538,3 +538,59 @@ def test_reachability_graph_infinite_loop():
             reachability_graph.marking_to_key[tuple(sorted({"17"}))]) in edges
     assert (reachability_graph.marking_to_key[tuple(sorted({"12"}))],
             reachability_graph.marking_to_key[tuple(sorted({"17"}))]) in edges
+
+
+def test_reachability_graph_simple_with_cache():
+    bpmn_model = _bpmn_model_with_AND_and_XOR()
+    reachability_graph_no_cache = bpmn_model.get_reachability_graph(cached_search=False)
+    reachability_graph_cache = bpmn_model.get_reachability_graph(cached_search=True)
+    assert reachability_graph_cache == reachability_graph_no_cache
+
+
+def test_reachability_graph_XOR_within_AND_with_cache():
+    bpmn_model = _bpmn_model_with_XOR_within_AND()
+    reachability_graph_no_cache = bpmn_model.get_reachability_graph(cached_search=False)
+    reachability_graph_cache = bpmn_model.get_reachability_graph(cached_search=True)
+    assert reachability_graph_cache == reachability_graph_no_cache
+
+
+def test_reachability_graph_nested_XOR_with_cache():
+    bpmn_model = _bpmn_model_with_AND_and_nested_XOR()
+    reachability_graph_no_cache = bpmn_model.get_reachability_graph(cached_search=False)
+    reachability_graph_cache = bpmn_model.get_reachability_graph(cached_search=True)
+    assert reachability_graph_cache == reachability_graph_no_cache
+
+
+def test_reachability_graph_loop_model_with_cache():
+    bpmn_model = _bpmn_model_with_loop_inside_AND()
+    reachability_graph_no_cache = bpmn_model.get_reachability_graph(cached_search=False)
+    reachability_graph_cache = bpmn_model.get_reachability_graph(cached_search=True)
+    assert reachability_graph_cache == reachability_graph_no_cache
+
+
+def test_reachability_graph_double_loop_model_with_cache():
+    bpmn_model = _bpmn_model_with_two_loops_inside_AND_followed_by_XOR_within_AND()
+    reachability_graph_no_cache = bpmn_model.get_reachability_graph(cached_search=False)
+    reachability_graph_cache = bpmn_model.get_reachability_graph(cached_search=True)
+    assert reachability_graph_cache == reachability_graph_no_cache
+
+
+def test_reachability_graph_triple_loop_model_with_cache():
+    bpmn_model = _bpmn_model_with_three_loops_inside_AND_two_of_them_inside_sub_AND()
+    reachability_graph_no_cache = bpmn_model.get_reachability_graph(cached_search=False)
+    reachability_graph_cache = bpmn_model.get_reachability_graph(cached_search=True)
+    assert reachability_graph_cache == reachability_graph_no_cache
+
+
+def test_reachability_graph_loop_inside_parallel_and_loop_all_back_with_cache():
+    bpmn_model = _bpmn_model_with_loop_inside_parallel_and_loop_all_back()
+    reachability_graph_no_cache = bpmn_model.get_reachability_graph(cached_search=False)
+    reachability_graph_cache = bpmn_model.get_reachability_graph(cached_search=True)
+    assert reachability_graph_cache == reachability_graph_no_cache
+
+
+def test_reachability_graph_infinite_loop_with_cache():
+    bpmn_model = _bpmn_model_with_infinite_loop()
+    reachability_graph_no_cache = bpmn_model.get_reachability_graph(cached_search=False)
+    reachability_graph_cache = bpmn_model.get_reachability_graph(cached_search=True)
+    assert reachability_graph_cache == reachability_graph_no_cache
