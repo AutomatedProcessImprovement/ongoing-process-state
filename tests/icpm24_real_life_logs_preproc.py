@@ -20,7 +20,7 @@ def read_and_process_datasets(datasets: List[str]):
         # Read XES event log
         original_xes_log = xes_import_factory.apply(xes_file_path)
         # Convert to DataFrame and filter if necessary
-        csv_log = get_dataframe_from_log(original_xes_log).sort_values(DEFAULT_XES_IDS.case)
+        csv_log = get_dataframe_from_log(original_xes_log)
         if "lifecycle:transition" in csv_log.columns:
             csv_log = csv_log[csv_log["lifecycle:transition"].isin([
                 "complete", "COMPLETE",
@@ -29,6 +29,7 @@ def read_and_process_datasets(datasets: List[str]):
             ])]
         # Keep only needed columns
         csv_log = csv_log[[DEFAULT_XES_IDS.case, DEFAULT_XES_IDS.activity, DEFAULT_XES_IDS.end_time]]
+        csv_log.sort_values([DEFAULT_XES_IDS.end_time])
         print_stats(csv_log, DEFAULT_XES_IDS)
         # Export to XES
         xes_log = convert_dataframe_to_event_log(csv_log)
@@ -52,8 +53,9 @@ def read_and_process_bpic_2013():
     # Read XES event log
     original_xes_log = xes_import_factory.apply(xes_file_path)
     # Convert to DataFrame and keep only needed columns
-    csv_log = get_dataframe_from_log(original_xes_log).sort_values(DEFAULT_XES_IDS.case)
+    csv_log = get_dataframe_from_log(original_xes_log)
     csv_log = csv_log[[DEFAULT_XES_IDS.case, DEFAULT_XES_IDS.activity, DEFAULT_XES_IDS.end_time]]
+    csv_log.sort_values([DEFAULT_XES_IDS.end_time])
     print_stats(csv_log, DEFAULT_XES_IDS)
     # Export to XES
     xes_log = convert_dataframe_to_event_log(csv_log)
@@ -88,6 +90,7 @@ def read_and_process_bpic_2014():
     csv_log = csv_log.sort_values(log_ids.end_time)
     # Keep only needed columns
     csv_log = csv_log[[log_ids.case, log_ids.activity, log_ids.end_time]]
+    csv_log.sort_values([log_ids.end_time])
     print_stats(csv_log, log_ids)
     # Export to XES
     csv_log.rename(columns={
@@ -127,11 +130,11 @@ def print_stats(event_log: pd.DataFrame, log_ids: EventLogIDs):
           f"\tMedian length: {median_lenght}\n"
           f"\tAvg length: {average_lenght}\n"
           f"\tMax length: {maximum_lenght}\n"
-          f"\t#Cases len 1: {num_len_1} ({round(num_len_1 / number_cases, 2)}%)\n"
-          f"\t#Cases len 2: {num_len_2} ({round(num_len_2 / number_cases, 2)}%)\n"
-          f"\t#Cases len 3: {num_len_3} ({round(num_len_3 / number_cases, 2)}%)\n"
-          f"\t#Cases len 4: {num_len_4} ({round(num_len_4 / number_cases, 2)}%)\n"
-          f"\t#Cases len 5: {num_len_5} ({round(num_len_5 / number_cases, 2)}%)\n\n")
+          f"\t#Cases len 1: {num_len_1} ({round(num_len_1 / number_cases, 2) * 100}%)\n"
+          f"\t#Cases len 2: {num_len_2} ({round(num_len_2 / number_cases, 2) * 100}%)\n"
+          f"\t#Cases len 3: {num_len_3} ({round(num_len_3 / number_cases, 2) * 100}%)\n"
+          f"\t#Cases len 4: {num_len_4} ({round(num_len_4 / number_cases, 2) * 100}%)\n"
+          f"\t#Cases len 5: {num_len_5} ({round(num_len_5 / number_cases, 2) * 100}%)\n\n")
 
 
 if __name__ == '__main__':
