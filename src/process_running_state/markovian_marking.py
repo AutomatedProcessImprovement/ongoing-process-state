@@ -52,10 +52,15 @@ class MarkovianMarking:
         marking), or k = n (limit reached). If maximum size n-gram is reached and more than one marking are associated
         to it, return one of them randomly.
 
+        If the n-gram contains activities that are not in the reachability graph (or marking n-grams), filter them out.
+
         :param n_gram: list of activity labels representing the last N activities recorded in the trace.
         :return: the marking corresponding to the state of the case given the last N activities.
         """
-        final_marking = set()
+        # Filter out nonexistent (in the reachability graph) activities
+        n_gram = [label for label in n_gram if label in self.graph.activity_to_edges]
+        # Initialize estimated marking to initial marking (if no other marking found, that's default)
+        final_marking = self.get_marking_state([MarkovianMarking.TRACE_START])[0]
         stop_search = False
         k = 1
         # Search iteratively for a deterministic marking
