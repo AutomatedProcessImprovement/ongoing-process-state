@@ -412,14 +412,8 @@ class BPMNModel:
                 else:
                     # If it was not rollbacked (i.e., all branches needed to advance until that point), keep it
                     final_markings_keys |= {tuple(sorted(advanced_marking))}
-        # If there is no final markings, it means that the advanced
-        # markings are already the final ones, no need to rollback
-        if len(final_markings_keys) == 0:
-            final_markings = advanced_markings
-        else:
-            final_markings = [set(final_marking) for final_marking in final_markings_keys]
         # Return final markings
-        return final_markings
+        return [set(final_marking) for final_marking in final_markings_keys]
 
     def get_reachability_graph(self, cached_search: bool = True) -> ReachabilityGraph:
         """
@@ -449,6 +443,8 @@ class BPMNModel:
             # Retrieve current markings
             current_marking = advanced_marking_stack.pop()  # The marking to simulate over
             reference_marking = reference_marking_stack.pop()  # Corresponding marking to use in the reachability graph
+            advanced_branches = current_marking - reference_marking
+            original_branches = reference_marking - current_marking
             # If this marking hasn't been explored (reference marking + advanced marking)
             exploration_key = (tuple(sorted(reference_marking)), tuple(sorted(current_marking)))
             if exploration_key not in explored_markings:
@@ -462,10 +458,8 @@ class BPMNModel:
                         [new_marking] = self.simulate_execution(enabled_node_id, current_marking)
                         # Advance the marking as much as possible without executing decision points (XOR-split/OR-split)
                         new_reference_marking = self.advance_marking_until_decision_point(new_marking)
-                        advanced = current_marking - reference_marking
-                        if len(advanced) > 0 and advanced.issubset(new_reference_marking):
-                            original = reference_marking - current_marking
-                            new_reference_marking = new_reference_marking - advanced | original
+                        if len(advanced_branches) > 0 and advanced_branches.issubset(new_reference_marking):
+                            new_reference_marking = new_reference_marking - advanced_branches | original_branches
                         # Update reachability graph
                         graph.add_marking(new_reference_marking)  # Add reference marking to graph
                         graph.add_edge(enabled_node.name, reference_marking, new_reference_marking)
