@@ -363,8 +363,7 @@ class BPMNModel:
         :param advanced_markings: list of markings result of advancing all branches in [marking] as much as possible.
         :return: list of rollbacked markings.
         """
-        final_markings = []
-        final_markings_keys = []
+        final_markings_keys = set()
         # Generate all possible branch combinations to explore individually
         branch_combinations = [
             combination
@@ -409,20 +408,16 @@ class BPMNModel:
                             # This advancement is independent of the current branch, rollback it
                             rollbacked = True
                             rollbacked_marking = advanced_marking - advanced_marking_other_branch | other_branches
-                            rollbacked_marking_key = tuple(sorted(rollbacked_marking))
-                            if rollbacked_marking_key not in final_markings_keys:
-                                final_markings += [rollbacked_marking]
-                                final_markings_keys += [rollbacked_marking_key]
-                # If it was not rollbacked (i.e., all branches needed to advance until that point), keep it
-                if not rollbacked:
-                    advanced_marking_key = tuple(sorted(advanced_marking))
-                    if advanced_marking_key not in final_markings_keys:
-                        final_markings += [advanced_marking]
-                        final_markings_keys += [advanced_marking_key]
+                            final_markings_keys |= {tuple(sorted(rollbacked_marking))}
+                else:
+                    # If it was not rollbacked (i.e., all branches needed to advance until that point), keep it
+                    final_markings_keys |= {tuple(sorted(advanced_marking))}
         # If there is no final markings, it means that the advanced
         # markings are already the final ones, no need to rollback
-        if len(final_markings) == 0:
+        if len(final_markings_keys) == 0:
             final_markings = advanced_markings
+        else:
+            final_markings = [set(final_marking) for final_marking in final_markings_keys]
         # Return final markings
         return final_markings
 
@@ -457,8 +452,6 @@ class BPMNModel:
             # If this marking hasn't been explored (reference marking + advanced marking)
             exploration_key = (tuple(sorted(reference_marking)), tuple(sorted(current_marking)))
             if exploration_key not in explored_markings:
-                if len(explored_markings) % 250 == 0:
-                    print(f"Explored: {len(explored_markings)} ----- Remaining: {len(advanced_marking_stack)}")
                 # Add it to explored
                 explored_markings.add(exploration_key)
                 # Fire all enabled activity/events and save new markings
