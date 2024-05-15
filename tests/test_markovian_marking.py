@@ -1,10 +1,27 @@
+import os
+import tempfile
 from typing import List, Set, Tuple
+
+import pytest
 
 from process_running_state.markovian_marking import MarkovianMarking
 from test_bpmn_model_fixtures import _bpmn_model_with_loop_inside_AND, _bpmn_model_with_AND_and_nested_XOR, \
     _bpmn_model_with_XOR_within_AND, _bpmn_model_with_AND_and_XOR, \
     _bpmn_model_with_two_loops_inside_AND_followed_by_XOR_within_AND, \
     _bpmn_model_with_three_loops_inside_AND_two_of_them_inside_sub_AND
+
+
+@pytest.fixture
+def temp_file_path():
+    # Create a temporary file and get the path
+    tmp = tempfile.NamedTemporaryFile(mode='w+t', delete=False)  # Set delete=False
+    path = tmp.name
+    try:
+        yield path
+    finally:
+        # Cleanup: close the file and remove it
+        tmp.close()
+        os.remove(path)
 
 
 def _prepare(markings: List[Set[str]]) -> Set[Tuple[str]]:
@@ -313,3 +330,31 @@ def test_get_best_marking_state_for():
                                                                                   {"17", "14", "28"},
                                                                                   {"17", "18", "26"},
                                                                                   {"17", "18", "28"}]
+
+
+def test_input_output_simple(temp_file_path):
+    # Compute simple markovian marking
+    bpmn_model = _bpmn_model_with_AND_and_nested_XOR()
+    reachability_graph = bpmn_model.get_reachability_graph()
+    markovian_marking = MarkovianMarking(reachability_graph, n_gram_size_limit=5)
+    markovian_marking.build()
+    # Export to file
+    markovian_marking.to_self_contained_map_file(temp_file_path)
+    # Import from file
+    read_markovian_marking = MarkovianMarking.from_self_contained_map_file(temp_file_path, reachability_graph)
+    # Assert equality
+    assert markovian_marking.markings == read_markovian_marking.markings
+
+
+def test_input_output_complex(temp_file_path):
+    # Compute complex markovian marking
+    bpmn_model = _bpmn_model_with_three_loops_inside_AND_two_of_them_inside_sub_AND()
+    reachability_graph = bpmn_model.get_reachability_graph()
+    markovian_marking = MarkovianMarking(reachability_graph, n_gram_size_limit=5)
+    markovian_marking.build()
+    # Export to file
+    markovian_marking.to_self_contained_map_file(temp_file_path)
+    # Import from file
+    read_markovian_marking = MarkovianMarking.from_self_contained_map_file(temp_file_path, reachability_graph)
+    # Assert equality
+    assert markovian_marking.markings == read_markovian_marking.markings

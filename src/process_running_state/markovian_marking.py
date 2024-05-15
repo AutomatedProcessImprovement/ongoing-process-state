@@ -1,3 +1,6 @@
+import ast
+import re
+from pathlib import Path
 from typing import Set, List
 
 from process_running_state.reachability_graph import ReachabilityGraph
@@ -133,3 +136,25 @@ class MarkovianMarking:
             for n_gram in self.markings:
                 markings = [self.graph.markings[marking] for marking in self.markings[n_gram]]
                 output_file.write(f"{str(n_gram)} : {str(markings)}\n")
+
+    @staticmethod
+    def from_self_contained_map_file(file_path: Path, reachability_graph: ReachabilityGraph) -> 'MarkovianMarking':
+        # Instantiate the marking
+        markovian_marking = MarkovianMarking(reachability_graph, 0)
+        # Go over file line by line
+        with open(file_path, "r") as input_file:
+            for line in input_file:
+                # Retrieve key and value
+                if line != "":
+                    match = re.search(r'\((.*?)\)\s*:\s*\[(.*)\]', line)
+                    if match:
+                        key = ast.literal_eval(f"({match.group(1)})")
+                        value = ast.literal_eval(f"[{match.group(2)}]")
+                        markovian_marking.markings[key] = {
+                            reachability_graph.marking_to_key[tuple(sorted(marking))]
+                            for marking in value
+                        }
+                    else:
+                        raise RuntimeError(f"Problem with format of line: {line}.")
+        # Return read markovian marking
+        return markovian_marking
