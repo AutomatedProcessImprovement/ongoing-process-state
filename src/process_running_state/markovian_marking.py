@@ -128,10 +128,8 @@ class MarkovianMarking:
             for key in self.markings
         }
 
-    def to_self_contained_string_map(self) -> str:
-        string_map = ""
-        self_contained_map = self.get_self_contained_map()
-        for key in self_contained_map:
-            string_map += f"{str(key)} -> {str(self_contained_map[key])}\n"
-        # Return map in string format
-        return string_map
+    def to_self_contained_map_file(self, file_path: Path):
+        with open(file_path, "w") as output_file:
+            for n_gram in self.markings:
+                markings = [self.graph.markings[marking] for marking in self.markings[n_gram]]
+                output_file.write(f"{str(n_gram)} : {str(markings)}\n")

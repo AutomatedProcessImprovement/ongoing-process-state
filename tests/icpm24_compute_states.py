@@ -1,7 +1,7 @@
 import time
 from enum import Enum
 from pathlib import Path
-from typing import Tuple, List, Set, Optional
+from typing import Tuple, List, Set
 
 import numpy as np
 from pix_framework.io.event_log import read_csv_log, DEFAULT_CSV_IDS
@@ -16,7 +16,7 @@ from process_running_state.markovian_marking import MarkovianMarking
 from process_running_state.reachability_graph import ReachabilityGraph
 from process_running_state.utils import read_bpmn_model
 
-number_of_runs = 10
+number_of_runs = 5
 log_ids = DEFAULT_CSV_IDS
 
 
@@ -26,7 +26,11 @@ class AlignmentType(Enum):
     OCC = 2
 
 
-def compute_current_states(datasets: List[str], noise: Optional[str] = None):
+def compute_current_states(
+        datasets: List[str],
+        noise_lvl: str = "",
+        discovery_extension: str = ""
+):
     """
     - Run both techniques, "our proposal" and "prefix-alignments", to compute the state of each ongoing process case.
     - Save the results in an intermediate CSV file storing the case ID, technique, ongoing state, avg runtime
@@ -37,26 +41,24 @@ def compute_current_states(datasets: List[str], noise: Optional[str] = None):
         print(f"\n\n----- Processing dataset: {dataset} -----\n")
         # Instantiate paths
         #  - For synthetic logs, adapt "input" paths for each of the noise levels (e.g., '/inputs/synthetic/original/')
-        if noise is None:
-            ongoing_cases_csv = Path(f"../inputs/synthetic/split/{dataset}_ongoing.csv.gz")
-            ongoing_cases_xes = f"../inputs/synthetic/split/{dataset}_ongoing.xes.gz"
-            output_filename = Path(f"../outputs/{dataset}_ongoing_states.csv")
-            reachability_graph_path = Path(f"../outputs/{dataset}_reachability_graph.tgf")
-            three_gram_index_path = Path(f"../outputs/{dataset}_3_gram_index.index")
-            five_gram_index_path = Path(f"../outputs/{dataset}_5_gram_index.index")
-            seven_gram_index_path = Path(f"../outputs/{dataset}_7_gram_index.index")
-            ten_gram_index_path = Path(f"../outputs/{dataset}_10_gram_index.index")
+        if noise_lvl == "":
+            ongoing_cases_csv = Path(f"../inputs/real-life/split/{dataset}_ongoing.csv.gz")
+            ongoing_cases_xes = f"../inputs/real-life/split/{dataset}_ongoing.xes.gz"
+            output_filename = Path(f"../outputs/{dataset}{discovery_extension}_ongoing_states.csv")
+            reachability_graph_path = Path(f"../outputs/{dataset}{discovery_extension}_reachability_graph.tgf")
+            three_gram_index_path = Path(f"../outputs/{dataset}{discovery_extension}_3_gram_index.index")
+            five_gram_index_path = Path(f"../outputs/{dataset}{discovery_extension}_5_gram_index.index")
+            ten_gram_index_path = Path(f"../outputs/{dataset}{discovery_extension}_10_gram_index.index")
         else:
-            ongoing_cases_csv = Path(f"../inputs/synthetic/{noise}/{dataset}_ongoing_{noise}.csv.gz")
-            ongoing_cases_xes = f"../inputs/synthetic/{noise}/{dataset}_ongoing_{noise}.xes.gz"
-            output_filename = Path(f"../outputs/{dataset}_{noise}_ongoing_states.csv")
-            reachability_graph_path = Path(f"../outputs/{dataset}_{noise}_reachability_graph.tgf")
-            three_gram_index_path = Path(f"../outputs/{dataset}_{noise}_3_gram_index.index")
-            five_gram_index_path = Path(f"../outputs/{dataset}_{noise}_5_gram_index.index")
-            seven_gram_index_path = Path(f"../outputs/{dataset}_{noise}_7_gram_index.index")
-            ten_gram_index_path = Path(f"../outputs/{dataset}_{noise}_10_gram_index.index")
-        bpmn_model_path = Path(f"../inputs/synthetic/{dataset}.bpmn")
-        pnml_model_path = Path(f"../inputs/synthetic/{dataset}.pnml")
+            ongoing_cases_csv = Path(f"../inputs/synthetic/{noise_lvl}/{dataset}_ongoing_{noise_lvl}.csv.gz")
+            ongoing_cases_xes = f"../inputs/synthetic/{noise_lvl}/{dataset}_ongoing_{noise_lvl}.xes.gz"
+            output_filename = Path(f"../outputs/{dataset}_{noise_lvl}_ongoing_states.csv")
+            reachability_graph_path = Path(f"../outputs/{dataset}_{noise_lvl}_reachability_graph.tgf")
+            three_gram_index_path = Path(f"../outputs/{dataset}_{noise_lvl}_3_gram_index.index")
+            five_gram_index_path = Path(f"../outputs/{dataset}_{noise_lvl}_5_gram_index.index")
+            ten_gram_index_path = Path(f"../outputs/{dataset}_{noise_lvl}_10_gram_index.index")
+        bpmn_model_path = Path(f"../inputs/real-life/{dataset}{discovery_extension}.bpmn")
+        pnml_model_path = Path(f"../inputs/real-life/{dataset}{discovery_extension}.pnml")
         # Read preprocessed event log(s)
         event_log_xes = xes_import_factory.apply(ongoing_cases_xes)
         event_log_csv = read_csv_log(ongoing_cases_csv, log_ids, sort=True)
@@ -65,33 +67,28 @@ def compute_current_states(datasets: List[str], noise: Optional[str] = None):
         bpmn_model = read_bpmn_model(bpmn_model_path)
         pnml_model, initial_marking, final_marking = petri.importer.pnml.import_net(pnml_model_path)
         # Compute and export reachability graph
+        reachability_graph, runtime_avg, runtime_cnf = compute_reachability_graph(bpmn_model)
+        with open(output_filename, 'a') as output_file:
+            output_file.write("technique,case_id,state,runtime_avg,runtime_cnf\n")
+            output_file.write(f"\"compute-reachability-graph\",,,{runtime_avg},{runtime_cnf}\n")
         with open(reachability_graph_path, 'w') as output_file:
-            output_file.write(bpmn_model.get_reachability_graph().to_tgf_format())
+            output_file.write(reachability_graph.to_tgf_format())
         # Open file and compute&save ongoing states
         with open(output_filename, 'a') as output_file:
             print("--- Computing N-Gram indexes ---\n")
-            # Write headers
-            output_file.write("technique,case_id,state,runtime_avg,runtime_cnf\n")
             # Compute & export marking for 3-gram
-            markovian_marking_3, runtime_avg, runtime_cnf = compute_markovian_marking(bpmn_model, 3)
-            with open(three_gram_index_path, "w") as n_gram_index_file:
-                n_gram_index_file.write(markovian_marking_3.to_self_contained_string_map())
+            markovian_marking_3, runtime_avg, runtime_cnf = compute_markovian_marking(reachability_graph, 3)
+            markovian_marking_3.to_self_contained_map_file(three_gram_index_path)
             output_file.write(f"\"build-marking-3\",,,{runtime_avg},{runtime_cnf}\n")
             # Compute & export marking for 5-gram
-            markovian_marking_5, runtime_avg, runtime_cnf = compute_markovian_marking(bpmn_model, 5)
-            with open(five_gram_index_path, "w") as n_gram_index_file:
-                n_gram_index_file.write(markovian_marking_5.to_self_contained_string_map())
+            markovian_marking_5, runtime_avg, runtime_cnf = compute_markovian_marking(reachability_graph, 5)
+            markovian_marking_5.to_self_contained_map_file(five_gram_index_path)
             output_file.write(f"\"build-marking-5\",,,{runtime_avg},{runtime_cnf}\n")
-            # Compute & export marking for 7-gram
-            markovian_marking_7, runtime_avg, runtime_cnf = compute_markovian_marking(bpmn_model, 7)
-            with open(seven_gram_index_path, "w") as n_gram_index_file:
-                n_gram_index_file.write(markovian_marking_7.to_self_contained_string_map())
-            output_file.write(f"\"build-marking-7\",,,{runtime_avg},{runtime_cnf}\n")
             # Compute & export marking for 10-gram
-            markovian_marking_10, runtime_avg, runtime_cnf = compute_markovian_marking(bpmn_model, 10)
-            with open(ten_gram_index_path, "w") as n_gram_index_file:
-                n_gram_index_file.write(markovian_marking_10.to_self_contained_string_map())
+            markovian_marking_10, runtime_avg, runtime_cnf = compute_markovian_marking(reachability_graph, 10)
+            markovian_marking_10.to_self_contained_map_file(ten_gram_index_path)
             output_file.write(f"\"build-marking-10\",,,{runtime_avg},{runtime_cnf}\n")
+            # Process prefix alignments
             i = 0
             print("--- Computing with Prefix-Alignments ---\n")
             total_iasr, total_ias, total_occ = 0, 0, 0
@@ -121,7 +118,7 @@ def compute_current_states(datasets: List[str], noise: Optional[str] = None):
                     print(f"\tProcessed {i}/{log_size}\n")
             i = 0
             print("--- Computing with N-Gram Indexing ---\n")
-            total_3, total_5, total_7, total_10 = 0, 0, 0, 0
+            total_3, total_5, total_10 = 0, 0, 0
             # Compute with our proposal
             for trace_id, events in event_log_csv.groupby(log_ids.case):
                 n = min(len(events), 10)
@@ -134,16 +131,12 @@ def compute_current_states(datasets: List[str], noise: Optional[str] = None):
                 state, runtime_avg, runtime_cnf = get_state_markovian_marking(markovian_marking_5, n_gram)
                 total_5 += runtime_avg
                 output_file.write(f"\"marking-5\",\"{trace_id}\",\"{state}\",{runtime_avg},{runtime_cnf}\n")
-                # 7-gram
-                state, runtime_avg, runtime_cnf = get_state_markovian_marking(markovian_marking_7, n_gram)
-                total_7 += runtime_avg
-                output_file.write(f"\"marking-7\",\"{trace_id}\",\"{state}\",{runtime_avg},{runtime_cnf}\n")
                 # 10-gram
                 state, runtime_avg, runtime_cnf = get_state_markovian_marking(markovian_marking_10, n_gram)
                 total_10 += runtime_avg
                 output_file.write(f"\"marking-10\",\"{trace_id}\",\"{state}\",{runtime_avg},{runtime_cnf}\n")
                 i += 1
-                if i % 10 == 0 or i == log_size:
+                if i % 50 == 0 or i == log_size:
                     print(f"\tProcessed {i}/{log_size}\n")
             # Print total runtimes
             output_file.write(f"\"total-runtime-IASR\",,,{total_iasr},\n")
@@ -151,21 +144,36 @@ def compute_current_states(datasets: List[str], noise: Optional[str] = None):
             output_file.write(f"\"total-runtime-OCC\",,,{total_occ},\n")
             output_file.write(f"\"total-runtime-marking-3\",,,{total_3},\n")
             output_file.write(f"\"total-runtime-marking-5\",,,{total_5},\n")
-            output_file.write(f"\"total-runtime-marking-7\",,,{total_7},\n")
             output_file.write(f"\"total-runtime-marking-10\",,,{total_10},\n")
 
 
+def compute_reachability_graph(bpmn_model: BPMNModel) -> Tuple[ReachabilityGraph, float, float]:
+    """Compute the reachability graph of the given BPMN model"""
+    runtimes = []
+    final_reachability_graph = None
+    # Compute state 10 times
+    for i in range(number_of_runs):
+        start = time.time()
+        reachability_graph = bpmn_model.get_reachability_graph()
+        end = time.time()
+        runtimes += [end - start]
+        if i == 0:
+            final_reachability_graph = reachability_graph
+    # Compute runtime confidence interval
+    runtime_avg, runtime_cnf = compute_mean_conf_interval(runtimes)
+    return final_reachability_graph, runtime_avg, runtime_cnf
+
+
 def compute_markovian_marking(
-        bpmn_model: BPMNModel,
+        reachability_graph: ReachabilityGraph,
         n_gram_size_limit: int
 ) -> Tuple[MarkovianMarking, float, float]:
-    """Compute the reachability graph and n-gram indexing of the given BPMN model"""
+    """Compute the n-gram indexing of the given BPMN model"""
     runtimes = []
     final_markovian_marking = None
     # Compute state 10 times
     for i in range(number_of_runs):
         start = time.time()
-        reachability_graph = bpmn_model.get_reachability_graph()
         markovian_marking = MarkovianMarking(reachability_graph, n_gram_size_limit)
         markovian_marking.build()
         end = time.time()
