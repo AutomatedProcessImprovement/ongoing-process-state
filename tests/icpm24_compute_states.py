@@ -61,6 +61,7 @@ def compute_current_states(
         bpmn_model = read_bpmn_model(bpmn_model_path)
         pnml_model, initial_marking, final_marking = petri.importer.pnml.import_net(pnml_model_path)
         # Compute and export reachability graph
+        print("--- Computing Reachability Graph ---\n")
         reachability_graph, runtime_avg, runtime_cnf = compute_reachability_graph(bpmn_model)
         with open(output_filename, 'a') as output_file:
             output_file.write("technique,case_id,state,runtime_avg,runtime_cnf\n")
@@ -68,24 +69,30 @@ def compute_current_states(
         with open(reachability_graph_path, 'w') as output_file:
             output_file.write(reachability_graph.to_tgf_format())
         # Open file and compute&save ongoing states
+        print("\n--- Computing N-Gram indexes ---\n")
+        # Compute & export marking for 3-gram
+        print("- Size 3 -")
+        markovian_marking_3, runtime_avg, runtime_cnf = compute_markovian_marking(reachability_graph, 3)
+        # markovian_marking_3.to_self_contained_map_file(three_gram_index_path)
         with open(output_filename, 'a') as output_file:
-            print("--- Computing N-Gram indexes ---\n")
-            # Compute & export marking for 3-gram
-            markovian_marking_3, runtime_avg, runtime_cnf = compute_markovian_marking(reachability_graph, 3)
-            # markovian_marking_3.to_self_contained_map_file(three_gram_index_path)
             output_file.write(f"\"build-marking-3\",,,{runtime_avg},{runtime_cnf}\n")
-            # Compute & export marking for 5-gram
-            markovian_marking_5, runtime_avg, runtime_cnf = compute_markovian_marking(reachability_graph, 5)
-            # markovian_marking_5.to_self_contained_map_file(five_gram_index_path)
+        # Compute & export marking for 5-gram
+        print("- Size 5 -")
+        markovian_marking_5, runtime_avg, runtime_cnf = compute_markovian_marking(reachability_graph, 5)
+        # markovian_marking_5.to_self_contained_map_file(five_gram_index_path)
+        with open(output_filename, 'a') as output_file:
             output_file.write(f"\"build-marking-5\",,,{runtime_avg},{runtime_cnf}\n")
-            # Compute & export marking for 10-gram
-            markovian_marking_10, runtime_avg, runtime_cnf = compute_markovian_marking(reachability_graph, 10)
-            # markovian_marking_10.to_self_contained_map_file(ten_gram_index_path)
+        # Compute & export marking for 10-gram
+        print("- Size 10 -")
+        markovian_marking_10, runtime_avg, runtime_cnf = compute_markovian_marking(reachability_graph, 10)
+        # markovian_marking_10.to_self_contained_map_file(ten_gram_index_path)
+        with open(output_filename, 'a') as output_file:
             output_file.write(f"\"build-marking-10\",,,{runtime_avg},{runtime_cnf}\n")
-            # Process prefix alignments
-            i = 0
-            print("--- Computing with Prefix-Alignments ---\n")
-            total_iasr, total_ias, total_occ = 0, 0, 0
+        # Process prefix alignments
+        i = 0
+        print("\n--- Computing with Prefix-Alignments ---\n")
+        total_iasr, total_ias, total_occ = 0, 0, 0
+        with open(output_filename, 'a') as output_file:
             # Compute with alignments
             for trace in event_log_xes:
                 trace_id = trace.attributes['concept:name']
@@ -121,10 +128,11 @@ def compute_current_states(
                 output_file.write(f"\"OCC\",\"{trace_id}\",\"{state}\",{runtime_avg}, {runtime_cnf}\n")
                 i += 1
                 if i % 10 == 0 or i == log_size:
-                    print(f"\tProcessed {i}/{log_size}\n")
-            i = 0
-            print("--- Computing with N-Gram Indexing ---\n")
-            total_3, total_5, total_10 = 0, 0, 0
+                    print(f"\tProcessed {i}/{log_size}")
+        i = 0
+        print("\n--- Computing with N-Gram Indexing ---\n")
+        total_3, total_5, total_10 = 0, 0, 0
+        with open(output_filename, 'a') as output_file:
             # Compute with our proposal
             for trace_id, events in event_log_csv.groupby(log_ids.case):
                 n = min(len(events), 10)
@@ -143,7 +151,7 @@ def compute_current_states(
                 output_file.write(f"\"marking-10\",\"{trace_id}\",\"{state}\",{runtime_avg},{runtime_cnf}\n")
                 i += 1
                 if i % 50 == 0 or i == log_size:
-                    print(f"\tProcessed {i}/{log_size}\n")
+                    print(f"\tProcessed {i}/{log_size}")
             # Print total runtimes
             output_file.write(f"\"total-runtime-IASR\",,,{total_iasr},\n")
             output_file.write(f"\"total-runtime-IAS\",,,{total_ias},\n")
@@ -163,7 +171,7 @@ def compute_reachability_graph(bpmn_model: BPMNModel) -> Tuple[ReachabilityGraph
         reachability_graph = bpmn_model.get_reachability_graph()
         end = time.time()
         runtimes += [end - start]
-        if i == 0:
+        if i == number_of_runs - 1:
             final_reachability_graph = reachability_graph
     # Compute runtime confidence interval
     runtime_avg, runtime_cnf = compute_mean_conf_interval(runtimes)
@@ -184,7 +192,7 @@ def compute_markovian_marking(
         markovian_marking.build()
         end = time.time()
         runtimes += [end - start]
-        if i == 0:
+        if i == number_of_runs - 1:
             final_markovian_marking = markovian_marking
     # Compute runtime confidence interval
     runtime_avg, runtime_cnf = compute_mean_conf_interval(runtimes)
@@ -219,7 +227,7 @@ def get_state_prefix_alignment(
                                                     final_marking)
         end = time.time()
         runtimes += [end - start]
-        if i == 0:
+        if i == number_of_runs - 1:
             model_movements = [
                 element['label'][1]
                 for element in result['alignment']
@@ -245,7 +253,7 @@ def get_state_markovian_marking(
         result = markovian_marking.get_best_marking_state_for(n_gram)
         end = time.time()
         runtimes += [end - start]
-        if i == 0:
+        if i == number_of_runs - 1:
             state = result
     # Compute runtime confidence interval
     runtime_avg, runtime_cnf = compute_mean_conf_interval(runtimes)
