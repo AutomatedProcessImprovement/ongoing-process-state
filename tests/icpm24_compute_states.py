@@ -46,17 +46,11 @@ def compute_current_states(
             ongoing_cases_xes = f"../inputs/real-life/split/{dataset}_ongoing.xes.gz"
             output_filename = Path(f"../outputs/{dataset}{discovery_extension}_ongoing_states.csv")
             reachability_graph_path = Path(f"../outputs/{dataset}{discovery_extension}_reachability_graph.tgf")
-            three_gram_index_path = Path(f"../outputs/{dataset}{discovery_extension}_3_gram_index.index")
-            five_gram_index_path = Path(f"../outputs/{dataset}{discovery_extension}_5_gram_index.index")
-            ten_gram_index_path = Path(f"../outputs/{dataset}{discovery_extension}_10_gram_index.index")
         else:
             ongoing_cases_csv = Path(f"../inputs/synthetic/{noise_lvl}/{dataset}_ongoing_{noise_lvl}.csv.gz")
             ongoing_cases_xes = f"../inputs/synthetic/{noise_lvl}/{dataset}_ongoing_{noise_lvl}.xes.gz"
             output_filename = Path(f"../outputs/{dataset}_{noise_lvl}_ongoing_states.csv")
             reachability_graph_path = Path(f"../outputs/{dataset}_{noise_lvl}_reachability_graph.tgf")
-            three_gram_index_path = Path(f"../outputs/{dataset}_{noise_lvl}_3_gram_index.index")
-            five_gram_index_path = Path(f"../outputs/{dataset}_{noise_lvl}_5_gram_index.index")
-            ten_gram_index_path = Path(f"../outputs/{dataset}_{noise_lvl}_10_gram_index.index")
         bpmn_model_path = Path(f"../inputs/real-life/{dataset}{discovery_extension}.bpmn")
         pnml_model_path = Path(f"../inputs/real-life/{dataset}{discovery_extension}.pnml")
         # Read preprocessed event log(s)
@@ -78,15 +72,15 @@ def compute_current_states(
             print("--- Computing N-Gram indexes ---\n")
             # Compute & export marking for 3-gram
             markovian_marking_3, runtime_avg, runtime_cnf = compute_markovian_marking(reachability_graph, 3)
-            markovian_marking_3.to_self_contained_map_file(three_gram_index_path)
+            # markovian_marking_3.to_self_contained_map_file(three_gram_index_path)
             output_file.write(f"\"build-marking-3\",,,{runtime_avg},{runtime_cnf}\n")
             # Compute & export marking for 5-gram
             markovian_marking_5, runtime_avg, runtime_cnf = compute_markovian_marking(reachability_graph, 5)
-            markovian_marking_5.to_self_contained_map_file(five_gram_index_path)
+            # markovian_marking_5.to_self_contained_map_file(five_gram_index_path)
             output_file.write(f"\"build-marking-5\",,,{runtime_avg},{runtime_cnf}\n")
             # Compute & export marking for 10-gram
             markovian_marking_10, runtime_avg, runtime_cnf = compute_markovian_marking(reachability_graph, 10)
-            markovian_marking_10.to_self_contained_map_file(ten_gram_index_path)
+            # markovian_marking_10.to_self_contained_map_file(ten_gram_index_path)
             output_file.write(f"\"build-marking-10\",,,{runtime_avg},{runtime_cnf}\n")
             # Process prefix alignments
             i = 0
@@ -98,19 +92,19 @@ def compute_current_states(
                 # A-star with recalculation
                 state, runtime_avg, runtime_cnf = get_state_prefix_alignment(trace, pnml_model, initial_marking,
                                                                              final_marking, AlignmentType.IASR,
-                                                                             markovian_marking_3.graph)
+                                                                             reachability_graph)
                 total_iasr += runtime_avg
                 output_file.write(f"\"IASR\",\"{trace_id}\",\"{state}\",{runtime_avg}, {runtime_cnf}\n")
                 # A-star without recalculation
                 state, runtime_avg, runtime_cnf = get_state_prefix_alignment(trace, pnml_model, initial_marking,
                                                                              final_marking, AlignmentType.IAS,
-                                                                             markovian_marking_3.graph)
+                                                                             reachability_graph)
                 total_ias += runtime_avg
                 output_file.write(f"\"IAS\",\"{trace_id}\",\"{state}\",{runtime_avg}, {runtime_cnf}\n")
                 # OCC
                 state, runtime_avg, runtime_cnf = get_state_prefix_alignment(trace, pnml_model, initial_marking,
                                                                              final_marking, AlignmentType.OCC,
-                                                                             markovian_marking_3.graph)
+                                                                             reachability_graph)
                 total_occ += runtime_avg
                 output_file.write(f"\"OCC\",\"{trace_id}\",\"{state}\",{runtime_avg}, {runtime_cnf}\n")
                 i += 1
