@@ -79,6 +79,8 @@ def export_as_xes(event_log: pd.DataFrame, file_path: str):
 if __name__ == '__main__':
     split_logs_into_ongoing_cases([
         "BPIC_2012",
+        "BPIC_2013_incidents",
+        "BPIC_2014_Activity_log_for_incidents",
         "BPIC_2015_1",
         "BPIC_2015_2",
         "BPIC_2015_3",
