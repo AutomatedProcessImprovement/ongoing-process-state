@@ -82,12 +82,12 @@ def compute_current_states(
         # markovian_marking_5.to_self_contained_map_file(five_gram_index_path)
         with open(output_filename, 'a') as output_file:
             output_file.write(f"\"build-marking-5\",,,{runtime_avg},{runtime_cnf}\n")
-        # Compute & export marking for 10-gram
-        print("- Size 10 -")
-        markovian_marking_10, runtime_avg, runtime_cnf = compute_markovian_marking(reachability_graph, 10)
-        # markovian_marking_10.to_self_contained_map_file(ten_gram_index_path)
+        # Compute & export marking for 8-gram
+        print("- Size 8 -")
+        markovian_marking_8, runtime_avg, runtime_cnf = compute_markovian_marking(reachability_graph, 8)
+        # markovian_marking_8.to_self_contained_map_file(ten_gram_index_path)
         with open(output_filename, 'a') as output_file:
-            output_file.write(f"\"build-marking-10\",,,{runtime_avg},{runtime_cnf}\n")
+            output_file.write(f"\"build-marking-8\",,,{runtime_avg},{runtime_cnf}\n")
         # Process prefix alignments
         i = 0
         print("\n--- Computing with Prefix-Alignments ---\n")
@@ -131,11 +131,11 @@ def compute_current_states(
                     print(f"\tProcessed {i}/{log_size}")
         i = 0
         print("\n--- Computing with N-Gram Indexing ---\n")
-        total_3, total_5, total_10 = 0, 0, 0
+        total_3, total_5, total_8 = 0, 0, 0
         with open(output_filename, 'a') as output_file:
             # Compute with our proposal
             for trace_id, events in event_log_csv.groupby(log_ids.case):
-                n = min(len(events), 10)
+                n = min(len(events), 8)
                 n_gram = list(events.tail(n)[log_ids.activity])
                 # 3-gram
                 state, runtime_avg, runtime_cnf = get_state_markovian_marking(markovian_marking_3, n_gram)
@@ -145,10 +145,10 @@ def compute_current_states(
                 state, runtime_avg, runtime_cnf = get_state_markovian_marking(markovian_marking_5, n_gram)
                 total_5 += runtime_avg
                 output_file.write(f"\"marking-5\",\"{trace_id}\",\"{state}\",{runtime_avg},{runtime_cnf}\n")
-                # 10-gram
-                state, runtime_avg, runtime_cnf = get_state_markovian_marking(markovian_marking_10, n_gram)
-                total_10 += runtime_avg
-                output_file.write(f"\"marking-10\",\"{trace_id}\",\"{state}\",{runtime_avg},{runtime_cnf}\n")
+                # 8-gram
+                state, runtime_avg, runtime_cnf = get_state_markovian_marking(markovian_marking_8, n_gram)
+                total_8 += runtime_avg
+                output_file.write(f"\"marking-8\",\"{trace_id}\",\"{state}\",{runtime_avg},{runtime_cnf}\n")
                 i += 1
                 if i % 50 == 0 or i == log_size:
                     print(f"\tProcessed {i}/{log_size}")
@@ -158,14 +158,14 @@ def compute_current_states(
             output_file.write(f"\"total-runtime-OCC\",,,{total_occ},\n")
             output_file.write(f"\"total-runtime-marking-3\",,,{total_3},\n")
             output_file.write(f"\"total-runtime-marking-5\",,,{total_5},\n")
-            output_file.write(f"\"total-runtime-marking-10\",,,{total_10},\n")
+            output_file.write(f"\"total-runtime-marking-8\",,,{total_8},\n")
 
 
 def compute_reachability_graph(bpmn_model: BPMNModel) -> Tuple[ReachabilityGraph, float, float]:
     """Compute the reachability graph of the given BPMN model"""
     runtimes = []
     final_reachability_graph = None
-    # Compute state 10 times
+    # Compute state number_of_runs times
     for i in range(number_of_runs):
         start = time.time()
         reachability_graph = bpmn_model.get_reachability_graph()
@@ -185,7 +185,7 @@ def compute_markovian_marking(
     """Compute the n-gram indexing of the given BPMN model"""
     runtimes = []
     final_markovian_marking = None
-    # Compute state 10 times
+    # Compute state number_of_runs times
     for i in range(number_of_runs):
         start = time.time()
         markovian_marking = MarkovianMarking(reachability_graph, n_gram_size_limit)
@@ -210,7 +210,7 @@ def get_state_prefix_alignment(
     """Compute the state of an ongoing case with a prefix-alignment technique."""
     runtimes = []
     state = None
-    # Compute state 10 times
+    # Compute state number_of_runs times
     for i in range(number_of_runs):
         start = time.time()
         if alignment_type == AlignmentType.IASR:
@@ -247,7 +247,7 @@ def get_state_markovian_marking(
     """Compute the state of an ongoing case with the n-gram indexing technique (our proposal)."""
     runtimes = []
     state = None
-    # Compute state 10 times
+    # Compute state number_of_runs times
     for i in range(number_of_runs):
         start = time.time()
         result = markovian_marking.get_best_marking_state_for(n_gram)

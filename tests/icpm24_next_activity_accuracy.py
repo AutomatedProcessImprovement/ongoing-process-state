@@ -25,7 +25,7 @@ def next_activity_accuracy(datasets: List[str], discovery_extension: str = ""):
         with open(reachability_graph_path, "r") as reachability_graph_file:
             reachability_graph = ReachabilityGraph.from_tgf_format(reachability_graph_file.read())
         # Go over each case ID
-        iasr, ias, occ, mark3, mark5, mark10 = [], [], [], [], [], []
+        iasr, ias, occ, mark3, mark5, mark8 = [], [], [], [], [], []
         for case_id, data in computed_states.groupby("case_id"):
             # Retrieve remaining activities of this case
             remaining_case = remaining_cases[remaining_cases[log_ids.case] == case_id]
@@ -35,7 +35,7 @@ def next_activity_accuracy(datasets: List[str], discovery_extension: str = ""):
             occ += [evaluate_state_approximation(data, "OCC", reachability_graph, remaining_case)]
             mark3 += [evaluate_state_approximation(data, "marking-3", reachability_graph, remaining_case)]
             mark5 += [evaluate_state_approximation(data, "marking-5", reachability_graph, remaining_case)]
-            mark10 += [evaluate_state_approximation(data, "marking-10", reachability_graph, remaining_case)]
+            mark8 += [evaluate_state_approximation(data, "marking-8", reachability_graph, remaining_case)]
         # Write stats to file
         with open(output_file_path, "a") as output_file:
             output_file.write(f"{dataset},{discovery_extension},IASR,{sum(iasr)},{sum(iasr) / len(iasr)}\n")
@@ -43,7 +43,7 @@ def next_activity_accuracy(datasets: List[str], discovery_extension: str = ""):
             output_file.write(f"{dataset},{discovery_extension},OCC,{sum(occ)},{sum(occ) / len(occ)}\n")
             output_file.write(f"{dataset},{discovery_extension},mark-3,{sum(mark3)},{sum(mark3) / len(mark3)}\n")
             output_file.write(f"{dataset},{discovery_extension},mark-5,{sum(mark5)},{sum(mark5) / len(mark5)}\n")
-            output_file.write(f"{dataset},{discovery_extension},mark-10,{sum(mark10)},{sum(mark10) / len(mark10)}\n")
+            output_file.write(f"{dataset},{discovery_extension},mark-8,{sum(mark8)},{sum(mark8) / len(mark8)}\n")
 
 
 def evaluate_state_approximation(
