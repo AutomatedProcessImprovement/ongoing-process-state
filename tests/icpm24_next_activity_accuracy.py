@@ -58,11 +58,15 @@ def evaluate_state_approximation(
     else:
         next_activity = None
     # Retrieve estimated marking
-    marking = ast.literal_eval(data[data["technique"] == technique]["state"].iloc[0])
-    # Check if the next activity is enabled
-    marking_key = reachability_graph.marking_to_key[tuple(sorted(marking))]
-    outgoing_edges = reachability_graph.outgoing_edges[marking_key]
-    is_enabled = next_activity in [reachability_graph.edge_to_activity[edge] for edge in outgoing_edges]
+    estimated_state = data[data["technique"] == technique]["state"].iloc[0]
+    if estimated_state.startswith("Error!"):
+        is_enabled = False
+    else:
+        marking = ast.literal_eval(estimated_state)
+        # Check if the next activity is enabled
+        marking_key = reachability_graph.marking_to_key[tuple(sorted(marking))]
+        outgoing_edges = reachability_graph.outgoing_edges[marking_key]
+        is_enabled = next_activity in [reachability_graph.edge_to_activity[edge] for edge in outgoing_edges]
     # Return if the next activity is enabled or not
     return is_enabled
 
