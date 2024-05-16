@@ -90,21 +90,33 @@ def compute_current_states(
             for trace in event_log_xes:
                 trace_id = trace.attributes['concept:name']
                 # A-star with recalculation
-                state, runtime_avg, runtime_cnf = get_state_prefix_alignment(trace, pnml_model, initial_marking,
-                                                                             final_marking, AlignmentType.IASR,
-                                                                             reachability_graph)
+                try:
+                    state, runtime_avg, runtime_cnf = get_state_prefix_alignment(trace, pnml_model, initial_marking,
+                                                                                 final_marking, AlignmentType.IASR,
+                                                                                 reachability_graph)
+                except TypeError as e:
+                    state = f"Error! {str(e).replace(',', '.')}"
+                    runtime_avg, runtime_cnf = 0, 0
                 total_iasr += runtime_avg
                 output_file.write(f"\"IASR\",\"{trace_id}\",\"{state}\",{runtime_avg}, {runtime_cnf}\n")
                 # A-star without recalculation
-                state, runtime_avg, runtime_cnf = get_state_prefix_alignment(trace, pnml_model, initial_marking,
-                                                                             final_marking, AlignmentType.IAS,
-                                                                             reachability_graph)
+                try:
+                    state, runtime_avg, runtime_cnf = get_state_prefix_alignment(trace, pnml_model, initial_marking,
+                                                                                 final_marking, AlignmentType.IAS,
+                                                                                 reachability_graph)
+                except TypeError as e:
+                    state = f"Error! {str(e).replace(',', '.')}"
+                    runtime_avg, runtime_cnf = 0, 0
                 total_ias += runtime_avg
                 output_file.write(f"\"IAS\",\"{trace_id}\",\"{state}\",{runtime_avg}, {runtime_cnf}\n")
                 # OCC
-                state, runtime_avg, runtime_cnf = get_state_prefix_alignment(trace, pnml_model, initial_marking,
-                                                                             final_marking, AlignmentType.OCC,
-                                                                             reachability_graph)
+                try:
+                    state, runtime_avg, runtime_cnf = get_state_prefix_alignment(trace, pnml_model, initial_marking,
+                                                                                 final_marking, AlignmentType.OCC,
+                                                                                 reachability_graph)
+                except TypeError as e:
+                    state = f"Error! {str(e).replace(',', '.')}"
+                    runtime_avg, runtime_cnf = 0, 0
                 total_occ += runtime_avg
                 output_file.write(f"\"OCC\",\"{trace_id}\",\"{state}\",{runtime_avg}, {runtime_cnf}\n")
                 i += 1
