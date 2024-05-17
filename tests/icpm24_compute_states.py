@@ -76,18 +76,24 @@ def compute_current_states(
         # markovian_marking_3.to_self_contained_map_file(three_gram_index_path)
         with open(output_filename, 'a') as output_file:
             output_file.write(f"\"build-marking-3\",,,{runtime_avg},{runtime_cnf}\n")
+        # Compute & export marking for 4-gram
+        print("- Size 4 -")
+        markovian_marking_4, runtime_avg, runtime_cnf = compute_markovian_marking(reachability_graph, 4)
+        # markovian_marking_4.to_self_contained_map_file(four_gram_index_path)
+        with open(output_filename, 'a') as output_file:
+            output_file.write(f"\"build-marking-4\",,,{runtime_avg},{runtime_cnf}\n")
         # Compute & export marking for 5-gram
         print("- Size 5 -")
         markovian_marking_5, runtime_avg, runtime_cnf = compute_markovian_marking(reachability_graph, 5)
         # markovian_marking_5.to_self_contained_map_file(five_gram_index_path)
         with open(output_filename, 'a') as output_file:
             output_file.write(f"\"build-marking-5\",,,{runtime_avg},{runtime_cnf}\n")
-        # Compute & export marking for 8-gram
-        print("- Size 8 -")
-        markovian_marking_8, runtime_avg, runtime_cnf = compute_markovian_marking(reachability_graph, 8)
-        # markovian_marking_8.to_self_contained_map_file(ten_gram_index_path)
+        # Compute & export marking for 6-gram
+        print("- Size 6 -")
+        markovian_marking_6, runtime_avg, runtime_cnf = compute_markovian_marking(reachability_graph, 6)
+        # markovian_marking_6.to_self_contained_map_file(six_gram_index_path)
         with open(output_filename, 'a') as output_file:
-            output_file.write(f"\"build-marking-8\",,,{runtime_avg},{runtime_cnf}\n")
+            output_file.write(f"\"build-marking-6\",,,{runtime_avg},{runtime_cnf}\n")
         # Process prefix alignments
         i = 0
         print("\n--- Computing with Prefix-Alignments ---\n")
@@ -131,24 +137,28 @@ def compute_current_states(
                     print(f"\tProcessed {i}/{log_size}")
         i = 0
         print("\n--- Computing with N-Gram Indexing ---\n")
-        total_3, total_5, total_8 = 0, 0, 0
+        total_3, total_4, total_5, total_6 = 0, 0, 0, 0
         with open(output_filename, 'a') as output_file:
             # Compute with our proposal
             for trace_id, events in event_log_csv.groupby(log_ids.case):
-                n = min(len(events), 8)
+                n = min(len(events), 6)
                 n_gram = list(events.tail(n)[log_ids.activity])
                 # 3-gram
                 state, runtime_avg, runtime_cnf = get_state_markovian_marking(markovian_marking_3, n_gram)
                 total_3 += runtime_avg
                 output_file.write(f"\"marking-3\",\"{trace_id}\",\"{state}\",{runtime_avg},{runtime_cnf}\n")
+                # 4-gram
+                state, runtime_avg, runtime_cnf = get_state_markovian_marking(markovian_marking_4, n_gram)
+                total_4 += runtime_avg
+                output_file.write(f"\"marking-4\",\"{trace_id}\",\"{state}\",{runtime_avg},{runtime_cnf}\n")
                 # 5-gram
                 state, runtime_avg, runtime_cnf = get_state_markovian_marking(markovian_marking_5, n_gram)
                 total_5 += runtime_avg
                 output_file.write(f"\"marking-5\",\"{trace_id}\",\"{state}\",{runtime_avg},{runtime_cnf}\n")
-                # 8-gram
-                state, runtime_avg, runtime_cnf = get_state_markovian_marking(markovian_marking_8, n_gram)
-                total_8 += runtime_avg
-                output_file.write(f"\"marking-8\",\"{trace_id}\",\"{state}\",{runtime_avg},{runtime_cnf}\n")
+                # 6-gram
+                state, runtime_avg, runtime_cnf = get_state_markovian_marking(markovian_marking_6, n_gram)
+                total_6 += runtime_avg
+                output_file.write(f"\"marking-6\",\"{trace_id}\",\"{state}\",{runtime_avg},{runtime_cnf}\n")
                 i += 1
                 if i % 50 == 0 or i == log_size:
                     print(f"\tProcessed {i}/{log_size}")
@@ -157,8 +167,9 @@ def compute_current_states(
             output_file.write(f"\"total-runtime-IAS\",,,{total_ias},\n")
             output_file.write(f"\"total-runtime-OCC\",,,{total_occ},\n")
             output_file.write(f"\"total-runtime-marking-3\",,,{total_3},\n")
+            output_file.write(f"\"total-runtime-marking-4\",,,{total_4},\n")
             output_file.write(f"\"total-runtime-marking-5\",,,{total_5},\n")
-            output_file.write(f"\"total-runtime-marking-8\",,,{total_8},\n")
+            output_file.write(f"\"total-runtime-marking-6\",,,{total_6},\n")
 
 
 def compute_reachability_graph(bpmn_model: BPMNModel) -> Tuple[ReachabilityGraph, float, float]:
