@@ -26,6 +26,19 @@ class AlignmentType(str, Enum):
     OCC = "OCC"
 
 
+def _n_gram_sizes(dataset: str) -> List[int]:
+    """ N-gram size to evaluate depending on the dataset. """
+    if "synthetic" in dataset:
+        # Synthetic tested with 3, 5, and 10
+        return [3, 5, 10]
+    elif dataset in ["BPIC_2018", "BPIC_2019"]:
+        # BPIC 2018 and 2019 overflow memory for 6 or more
+        return [3, 4, 5]
+    else:
+        # Other real-life logs
+        return [3, 4, 5, 6, 7]
+
+
 def compute_current_states(
         datasets: List[str],
         noise_lvl: str = "",
@@ -72,8 +85,7 @@ def compute_current_states(
 
         # Compute n-gram indexes
         print("\n--- Computing N-Gram indexes ---\n")
-        n_gram_sizes = [3, 4, 5, 6, 7]
-        for n_size in n_gram_sizes:
+        for n_size in _n_gram_sizes(dataset):
             # Compute n-gram index
             print(f"- Building {n_size}-gram index -")
             markovian_marking, runtime_avg, runtime_cnf = compute_markovian_marking(reachability_graph, n_size)
