@@ -16,14 +16,14 @@ from process_running_state.markovian_marking import MarkovianMarking
 from process_running_state.reachability_graph import ReachabilityGraph
 from process_running_state.utils import read_bpmn_model
 
-number_of_runs = 5
+number_of_runs = 3
 log_ids = DEFAULT_CSV_IDS
 
 
-class AlignmentType(Enum):
-    IASR = 0
-    IAS = 1
-    OCC = 2
+class AlignmentType(str, Enum):
+    IASR = "IASR"
+    IAS = "IAS"
+    OCC = "OCC"
 
 
 def compute_current_states(
@@ -60,6 +60,7 @@ def compute_current_states(
         # Read proces model(s)
         bpmn_model = read_bpmn_model(bpmn_model_path)
         pnml_model, initial_marking, final_marking = petri.importer.pnml.import_net(pnml_model_path)
+
         # Compute and export reachability graph
         print("--- Computing Reachability Graph ---\n")
         reachability_graph, runtime_avg, runtime_cnf = compute_reachability_graph(bpmn_model)
@@ -68,108 +69,63 @@ def compute_current_states(
             output_file.write(f"\"compute-reachability-graph\",,,{runtime_avg},{runtime_cnf}\n")
         with open(reachability_graph_path, 'w') as output_file:
             output_file.write(reachability_graph.to_tgf_format())
-        # Open file and compute&save ongoing states
+
+        # Compute n-gram indexes
         print("\n--- Computing N-Gram indexes ---\n")
-        # Compute & export marking for 3-gram
-        print("- Size 3 -")
-        markovian_marking_3, runtime_avg, runtime_cnf = compute_markovian_marking(reachability_graph, 3)
-        # markovian_marking_3.to_self_contained_map_file(three_gram_index_path)
-        with open(output_filename, 'a') as output_file:
-            output_file.write(f"\"build-marking-3\",,,{runtime_avg},{runtime_cnf}\n")
-        # Compute & export marking for 4-gram
-        print("- Size 4 -")
-        markovian_marking_4, runtime_avg, runtime_cnf = compute_markovian_marking(reachability_graph, 4)
-        # markovian_marking_4.to_self_contained_map_file(four_gram_index_path)
-        with open(output_filename, 'a') as output_file:
-            output_file.write(f"\"build-marking-4\",,,{runtime_avg},{runtime_cnf}\n")
-        # Compute & export marking for 5-gram
-        print("- Size 5 -")
-        markovian_marking_5, runtime_avg, runtime_cnf = compute_markovian_marking(reachability_graph, 5)
-        # markovian_marking_5.to_self_contained_map_file(five_gram_index_path)
-        with open(output_filename, 'a') as output_file:
-            output_file.write(f"\"build-marking-5\",,,{runtime_avg},{runtime_cnf}\n")
-        # Compute & export marking for 6-gram
-        print("- Size 6 -")
-        markovian_marking_6, runtime_avg, runtime_cnf = compute_markovian_marking(reachability_graph, 6)
-        # markovian_marking_6.to_self_contained_map_file(six_gram_index_path)
-        with open(output_filename, 'a') as output_file:
-            output_file.write(f"\"build-marking-6\",,,{runtime_avg},{runtime_cnf}\n")
+        n_gram_sizes = [3, 4, 5, 6, 7]
+        for n_size in n_gram_sizes:
+            # Compute n-gram index
+            print(f"- Building {n_size}-gram index -")
+            markovian_marking, runtime_avg, runtime_cnf = compute_markovian_marking(reachability_graph, n_size)
+            with open(output_filename, 'a') as output_file:
+                output_file.write(f"\"build-marking-{n_size}\",,,{runtime_avg},{runtime_cnf}\n")
+            # Estimate states
+            print(f"- Estimating states with {n_size}-gram index -")
+            total_runtime = 0
+            with open(output_filename, 'a') as output_file:
+                i = 0
+                for trace_id, events in event_log_csv.groupby(log_ids.case):
+                    # Get n-gram
+                    n_gram = list(events.tail(min(len(events), n_size))[log_ids.activity])
+                    # Estimate with n-gram index
+                    state, runtime_avg, runtime_cnf = get_state_markovian_marking(markovian_marking, n_gram)
+                    total_runtime += runtime_avg
+                    # Output to file
+                    output_file.write(f"\"marking-{n_size}\",\"{trace_id}\",\"{state}\",{runtime_avg},{runtime_cnf}\n")
+                    # Keep progress counter
+                    i += 1
+                    if i % 500 == 0 or i == log_size:
+                        print(f"\tProcessed {i}/{log_size}")
+                # Write total runtime
+                output_file.write(f"\"total-runtime-marking-{n_size}\",,,{total_runtime},\n")
+
         # Process prefix alignments
-        i = 0
         print("\n--- Computing with Prefix-Alignments ---\n")
-        total_iasr, total_ias, total_occ = 0, 0, 0
-        with open(output_filename, 'a') as output_file:
-            # Compute with alignments
-            for trace in event_log_xes:
-                trace_id = trace.attributes['concept:name']
-                # A-star with recalculation
-                try:
-                    state, runtime_avg, runtime_cnf = get_state_prefix_alignment(trace, pnml_model, initial_marking,
-                                                                                 final_marking, AlignmentType.IASR,
-                                                                                 reachability_graph)
-                except TypeError as e:
-                    state = f"Error! {str(e).replace(',', '.')}"
-                    runtime_avg, runtime_cnf = 0, 0
-                total_iasr += runtime_avg
-                output_file.write(f"\"IASR\",\"{trace_id}\",\"{state}\",{runtime_avg}, {runtime_cnf}\n")
-                # A-star without recalculation
-                try:
-                    state, runtime_avg, runtime_cnf = get_state_prefix_alignment(trace, pnml_model, initial_marking,
-                                                                                 final_marking, AlignmentType.IAS,
-                                                                                 reachability_graph)
-                except TypeError as e:
-                    state = f"Error! {str(e).replace(',', '.')}"
-                    runtime_avg, runtime_cnf = 0, 0
-                total_ias += runtime_avg
-                output_file.write(f"\"IAS\",\"{trace_id}\",\"{state}\",{runtime_avg}, {runtime_cnf}\n")
-                # OCC
-                try:
-                    state, runtime_avg, runtime_cnf = get_state_prefix_alignment(trace, pnml_model, initial_marking,
-                                                                                 final_marking, AlignmentType.OCC,
-                                                                                 reachability_graph)
-                except TypeError as e:
-                    state = f"Error! {str(e).replace(',', '.')}"
-                    runtime_avg, runtime_cnf = 0, 0
-                total_occ += runtime_avg
-                output_file.write(f"\"OCC\",\"{trace_id}\",\"{state}\",{runtime_avg}, {runtime_cnf}\n")
-                i += 1
-                if i % 10 == 0 or i == log_size:
-                    print(f"\tProcessed {i}/{log_size}")
-        i = 0
-        print("\n--- Computing with N-Gram Indexing ---\n")
-        total_3, total_4, total_5, total_6 = 0, 0, 0, 0
-        with open(output_filename, 'a') as output_file:
-            # Compute with our proposal
-            for trace_id, events in event_log_csv.groupby(log_ids.case):
-                n = min(len(events), 6)
-                n_gram = list(events.tail(n)[log_ids.activity])
-                # 3-gram
-                state, runtime_avg, runtime_cnf = get_state_markovian_marking(markovian_marking_3, n_gram)
-                total_3 += runtime_avg
-                output_file.write(f"\"marking-3\",\"{trace_id}\",\"{state}\",{runtime_avg},{runtime_cnf}\n")
-                # 4-gram
-                state, runtime_avg, runtime_cnf = get_state_markovian_marking(markovian_marking_4, n_gram)
-                total_4 += runtime_avg
-                output_file.write(f"\"marking-4\",\"{trace_id}\",\"{state}\",{runtime_avg},{runtime_cnf}\n")
-                # 5-gram
-                state, runtime_avg, runtime_cnf = get_state_markovian_marking(markovian_marking_5, n_gram)
-                total_5 += runtime_avg
-                output_file.write(f"\"marking-5\",\"{trace_id}\",\"{state}\",{runtime_avg},{runtime_cnf}\n")
-                # 6-gram
-                state, runtime_avg, runtime_cnf = get_state_markovian_marking(markovian_marking_6, n_gram)
-                total_6 += runtime_avg
-                output_file.write(f"\"marking-6\",\"{trace_id}\",\"{state}\",{runtime_avg},{runtime_cnf}\n")
-                i += 1
-                if i % 50 == 0 or i == log_size:
-                    print(f"\tProcessed {i}/{log_size}")
-            # Print total runtimes
-            output_file.write(f"\"total-runtime-IASR\",,,{total_iasr},\n")
-            output_file.write(f"\"total-runtime-IAS\",,,{total_ias},\n")
-            output_file.write(f"\"total-runtime-OCC\",,,{total_occ},\n")
-            output_file.write(f"\"total-runtime-marking-3\",,,{total_3},\n")
-            output_file.write(f"\"total-runtime-marking-4\",,,{total_4},\n")
-            output_file.write(f"\"total-runtime-marking-5\",,,{total_5},\n")
-            output_file.write(f"\"total-runtime-marking-6\",,,{total_6},\n")
+        prefix_types = [AlignmentType.IASR, AlignmentType.IAS, AlignmentType.OCC]
+        for prefix_type in prefix_types:
+            print(f"- Estimating with {prefix_type} -")
+            total_runtime = 0
+            with open(output_filename, 'a') as output_file:
+                i = 0
+                for trace in event_log_xes:
+                    trace_id = trace.attributes['concept:name']
+                    # Estimate with prefix-alignment
+                    try:
+                        state, runtime_avg, runtime_cnf = get_state_prefix_alignment(trace, pnml_model, initial_marking,
+                                                                                     final_marking, prefix_type,
+                                                                                     reachability_graph)
+                    except TypeError as e:
+                        state = f"Error! {str(e).replace(',', '.')}"
+                        runtime_avg, runtime_cnf = 0, 0
+                    total_runtime += runtime_avg
+                    # Output to file
+                    output_file.write(f"\"{prefix_type}\",\"{trace_id}\",\"{state}\",{runtime_avg}, {runtime_cnf}\n")
+                    # Keep progress counter
+                    i += 1
+                    if i % 10 == 0 or i == log_size:
+                        print(f"\tProcessed {i}/{log_size}")
+                # Print total runtimes
+                output_file.write(f"\"total-runtime-{prefix_type}\",,,{total_runtime},\n")
 
 
 def compute_reachability_graph(bpmn_model: BPMNModel) -> Tuple[ReachabilityGraph, float, float]:
