@@ -1,6 +1,6 @@
 from enum import Enum
 from itertools import combinations
-from typing import List, Set, Dict
+from typing import List, Set, Dict, Tuple, Optional
 
 from process_running_state.reachability_graph import ReachabilityGraph
 
@@ -253,7 +253,11 @@ class BPMNModel:
         # Return final set
         return advanced_marking
 
-    def advance_full_marking(self, marking: Set[str]) -> List[Set[str]]:
+    def advance_full_marking(
+            self,
+            marking: Set[str],
+            explored_markings: Optional[Set[Tuple[str]]] = None,
+    ) -> List[Set[str]]:
         """
         Advance the current marking as much as possible without executing any task, i.e., execute gateways until there
         are none enabled. If there are multiple (parallel) branches, first advance in each of them individually, and
@@ -262,12 +266,13 @@ class BPMNModel:
         be the markings after individually advancing each branch.
 
         :param marking: marking to consider as starting point to perform the advance operation.
+        :param explored_markings: if recursive call, set of previously explored markings to avoid infinite loop.
         :return: list with the different markings result of such advancement.
         """
         # First advance all branches at the same time until tasks, events, or decision points (XOR-split/OR-split)
         advanced_marking = self.advance_marking_until_decision_point(marking)
         # Advance all branches together (getting all combinations of advancements)
-        fully_advanced_markings = self._advance_marking(advanced_marking)
+        fully_advanced_markings = self._advance_marking(advanced_marking, explored_markings)
         # For each branch, try to rollback the advancements in other branches as much as possible
         if fully_advanced_markings == [advanced_marking] or len(advanced_marking) == 1:
             # If the marking did not advance, or there is only one branch, no need to try to rollback other branches
@@ -284,7 +289,11 @@ class BPMNModel:
         # Return final markings (if none of them enabled any new tasks/events return original marking)
         return filtered_final_markings if len(filtered_final_markings) > 0 else [advanced_marking]
 
-    def _advance_marking(self, marking: Set[str]) -> List[Set[str]]:
+    def _advance_marking(
+            self,
+            marking: Set[str],
+            explored_markings: Optional[Set[Tuple[str]]] = None,
+    ) -> List[Set[str]]:
         """
         Advance the current marking as much as possible without executing any task, i.e., execute gateways until there
         are none enabled.
@@ -294,6 +303,7 @@ class BPMNModel:
         possible combinations, but branch by branch).
 
         :param marking: marking to consider as starting point to perform the advance operation.
+        :param explored_markings: if recursive call, set of previously explored markings to avoid infinite loop.
         :return: list with the different markings result of such advancement.
         """
         # If result in cache, retrieve, otherwise compute
@@ -303,7 +313,7 @@ class BPMNModel:
         else:
             # Initialize breath-first search list
             current_markings = [marking]
-            explored_markings = set()
+            explored_markings = set() if explored_markings is None else explored_markings
             final_markings = []
             # Run propagation until no more gateways can be fired
             while current_markings:
@@ -333,7 +343,7 @@ class BPMNModel:
                                 advanced_markings = self.simulate_execution(gateway_id, current_marking)
                                 # For each advanced markings (after gateway split)
                                 for advanced_marking in advanced_markings:
-                                    final_markings += self.advance_full_marking(advanced_marking)
+                                    final_markings += self.advance_full_marking(advanced_marking, explored_markings)
                             else:
                                 # JOINs or XOR-split, execute and continue with advancement
                                 next_markings += self.simulate_execution(gateway_id, current_marking)
