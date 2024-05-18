@@ -108,7 +108,7 @@ def compute_current_states(
             print(f"- Building {n_size}-gram index -")
             markovian_marking, runtime_avg, runtime_cnf = compute_markovian_marking(reachability_graph, n_size)
             with open(output_filename, 'a') as output_file:
-                output_file.write(f"\"build-marking-{n_size}\",,,{runtime_avg},{runtime_cnf}\n")
+                output_file.write(f"\"build-{n_size}-gram-index\",,,{runtime_avg},{runtime_cnf}\n")
             # Estimate states
             print(f"- Estimating states with {n_size}-gram index -")
             total_runtime = 0
@@ -121,13 +121,13 @@ def compute_current_states(
                     state, runtime_avg, runtime_cnf = get_state_markovian_marking(markovian_marking, n_gram)
                     total_runtime += runtime_avg
                     # Output to file
-                    output_file.write(f"\"marking-{n_size}\",\"{trace_id}\",\"{state}\",{runtime_avg},{runtime_cnf}\n")
+                    output_file.write(f"\"{n_size}-gram-index\",\"{trace_id}\",\"{state}\",{runtime_avg},{runtime_cnf}\n")
                     # Keep progress counter
                     i += 1
                     if i % 500 == 0 or i == log_size:
                         print(f"\tProcessed {i}/{log_size}")
                 # Write total runtime
-                output_file.write(f"\"total-runtime-marking-{n_size}\",,,{total_runtime},\n")
+                output_file.write(f"\"total-runtime-{n_size}-gram-index\",,,{total_runtime},\n")
 
         # Process prefix alignments
         print("\n--- Computing with Prefix-Alignments ---\n")
