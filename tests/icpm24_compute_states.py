@@ -26,17 +26,35 @@ class AlignmentType(str, Enum):
     OCC = "OCC"
 
 
-def _n_gram_sizes(dataset: str) -> List[int]:
+def _n_gram_sizes(dataset: str, threshold: str) -> List[int]:
     """ N-gram size to evaluate depending on the dataset. """
+    sizes = []
     if "synthetic" in dataset:
         # Synthetic tested with 3, 5, and 10
-        return [3, 5, 10]
-    elif dataset in ["BPIC_2018", "BPIC_2019"]:
-        # BPIC 2018 and 2019 overflow memory for 6 or more
-        return [3, 4, 5]
+        sizes = [3, 5, 10]
+    elif "BPIC_2018" in dataset:
+        # BPIC 2018
+        if "IMf50" in threshold or "IMf20" in threshold:
+            sizes = [3, 4, 5]
+        elif "IMf10" in threshold:
+            sizes = [3, 4]
+    elif "BPIC_2019" in dataset:
+        # BPIC 2019
+        if "IMf50" in threshold:
+            sizes = [3, 4, 5]
+        elif "IMf20" in threshold or "IMf10" in threshold:
+            sizes = [3, 4]
+    elif "TravelPermitData" in dataset or "BPIC_2014" in dataset:
+        # BPIC_2020_TravelPermitData and BPIC_2014_Activity_log_for_incidents
+        if "IMf50" in threshold or "IMf20" in threshold:
+            sizes = [3, 4, 5, 6]
+        elif "IMf10" in threshold:
+            sizes = [3, 4, 5]
     else:
         # Other real-life logs
-        return [3, 4, 5, 6, 7]
+        sizes = [3, 4, 5, 6]
+    # Return sizes
+    return sizes
 
 
 def compute_current_states(
@@ -85,7 +103,7 @@ def compute_current_states(
 
         # Compute n-gram indexes
         print("\n--- Computing N-Gram indexes ---\n")
-        for n_size in _n_gram_sizes(dataset):
+        for n_size in _n_gram_sizes(dataset, discovery_extension):
             # Compute n-gram index
             print(f"- Building {n_size}-gram index -")
             markovian_marking, runtime_avg, runtime_cnf = compute_markovian_marking(reachability_graph, n_size)
@@ -256,34 +274,76 @@ def compute_mean_conf_interval(data: list, confidence: float = 0.95) -> Tuple[fl
 
 if __name__ == '__main__':
     compute_current_states([
-        "synthetic_and_k3",
-        "synthetic_and_k5",
-        "synthetic_and_k10",
-        "synthetic_and_kinf",
-        "synthetic_xor_sequence",
-        "synthetic_xor_loop",
-    ])
+        "BPIC_2012",
+        "BPIC_2013_incidents",
+        "BPIC_2014_Activity_log_for_incidents",
+        "BPIC_2017",
+        "BPIC_2018",
+        "BPIC_2019",
+        "BPIC_2020_DomesticDeclarations",
+        "BPIC_2020_InternationalDeclarations",
+        "BPIC_2020_PrepaidTravelCost",
+        "BPIC_2020_RequestForPayment",
+        "BPIC_2020_TravelPermitData",
+        "Sepsis_Cases",
+    ], discovery_extension="_IMf50")
     compute_current_states([
-        "synthetic_and_k3",
-        "synthetic_and_k5",
-        "synthetic_and_k10",
-        "synthetic_and_kinf",
-        "synthetic_xor_sequence",
-        "synthetic_xor_loop",
-    ], "noise_1")
+        "BPIC_2012",
+        "BPIC_2013_incidents",
+        "BPIC_2014_Activity_log_for_incidents",
+        "BPIC_2017",
+        "BPIC_2018",
+        "BPIC_2019",
+        "BPIC_2020_DomesticDeclarations",
+        "BPIC_2020_InternationalDeclarations",
+        "BPIC_2020_PrepaidTravelCost",
+        "BPIC_2020_RequestForPayment",
+        "BPIC_2020_TravelPermitData",
+        "Sepsis_Cases",
+    ], discovery_extension="_IMf20")
     compute_current_states([
-        "synthetic_and_k3",
-        "synthetic_and_k5",
-        "synthetic_and_k10",
-        "synthetic_and_kinf",
-        "synthetic_xor_sequence",
-        "synthetic_xor_loop",
-    ], "noise_2")
-    compute_current_states([
-        "synthetic_and_k3",
-        "synthetic_and_k5",
-        "synthetic_and_k10",
-        "synthetic_and_kinf",
-        "synthetic_xor_sequence",
-        "synthetic_xor_loop",
-    ], "noise_3")
+        "BPIC_2012",
+        "BPIC_2013_incidents",
+        "BPIC_2014_Activity_log_for_incidents",
+        "BPIC_2017",
+        "BPIC_2018",
+        "BPIC_2019",
+        "BPIC_2020_DomesticDeclarations",
+        "BPIC_2020_InternationalDeclarations",
+        "BPIC_2020_PrepaidTravelCost",
+        "BPIC_2020_RequestForPayment",
+        "BPIC_2020_TravelPermitData",
+        "Sepsis_Cases",
+    ], discovery_extension="_IMf10")
+    # compute_current_states([
+    #     "synthetic_and_k3",
+    #     "synthetic_and_k5",
+    #     "synthetic_and_k10",
+    #     "synthetic_and_kinf",
+    #     "synthetic_xor_sequence",
+    #     "synthetic_xor_loop",
+    # ])
+    # compute_current_states([
+    #     "synthetic_and_k3",
+    #     "synthetic_and_k5",
+    #     "synthetic_and_k10",
+    #     "synthetic_and_kinf",
+    #     "synthetic_xor_sequence",
+    #     "synthetic_xor_loop",
+    # ], noise_lvl="noise_1")
+    # compute_current_states([
+    #     "synthetic_and_k3",
+    #     "synthetic_and_k5",
+    #     "synthetic_and_k10",
+    #     "synthetic_and_kinf",
+    #     "synthetic_xor_sequence",
+    #     "synthetic_xor_loop",
+    # ], noise_lvl="noise_2")
+    # compute_current_states([
+    #     "synthetic_and_k3",
+    #     "synthetic_and_k5",
+    #     "synthetic_and_k10",
+    #     "synthetic_and_kinf",
+    #     "synthetic_xor_sequence",
+    #     "synthetic_xor_loop",
+    # ], noise_lvl="noise_3")
