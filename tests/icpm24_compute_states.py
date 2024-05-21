@@ -222,8 +222,6 @@ def get_state_prefix_alignment(
             result = calculate_prefix_alignment_occ(trace, pnml_model,
                                                     initial_marking,
                                                     final_marking)
-        end = time.time()
-        runtimes += [end - start]
         if i == number_of_runs - 1:
             model_movements = [
                 element['label'][1]
@@ -232,6 +230,8 @@ def get_state_prefix_alignment(
             ]
             states = reachability_graph.get_markings_from_activity_sequence(model_movements)
             state = np.random.choice(states, 1)[0]  # If non-deterministic process, then random state
+        end = time.time()
+        runtimes += [end - start]
     # Compute runtime confidence interval
     runtime_avg, runtime_cnf = compute_mean_conf_interval(runtimes)
     return state, runtime_avg, runtime_cnf
