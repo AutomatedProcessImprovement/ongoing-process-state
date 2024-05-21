@@ -48,9 +48,9 @@ class ReachabilityGraph:
         # Initiate search in the initial marking
         current_marking_ids = {self.initial_marking_id}
         # Iterate over the activity sequence advancing in the reachability graph
-        errors = []  # List with paths that could not continue propagation
         for activity in activity_sequence:
             next_marking_ids = set()
+            errors = []  # List with paths that could not continue propagation
             # Process each current marking
             for current_marking_id in current_marking_ids:
                 # Retrieve edges leaving current marking with the activity as label
@@ -65,12 +65,13 @@ class ReachabilityGraph:
                     next_marking_ids |= {self.edges[edge][1] for edge in potential_edges}
                 else:
                     # Error, the activity is not enabled in the current marking
-                    errors += [f"Error, '{activity}' is not enabled from marking with ID '{current_marking_id}'."]
+                    errors += [str(current_marking_id)]
+            # Raise error if all paths ended up in an error
+            if len(next_marking_ids) == 0:
+                error_markings = ", ".join(errors)
+                raise RuntimeError(f"Error, '{activity}' is not enabled from markings {error_markings}.")
             # Replace current with next marking ids
             current_marking_ids = next_marking_ids
-        # Raise error if all paths ended up in an error
-        if len(current_marking_ids) == 0:
-            raise RuntimeError("\n".join(errors))
         # Return last reached marking(s)
         return [self.markings[marking_id] for marking_id in current_marking_ids]
 
