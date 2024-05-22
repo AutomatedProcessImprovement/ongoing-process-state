@@ -12,7 +12,7 @@ from scipy.stats import t
 from icpm24_prefix_alignment import calculate_prefix_alignment_modified_a_star_with_heuristic, \
     calculate_prefix_alignment_modified_a_star_with_heuristic_without_recalculation, calculate_prefix_alignment_occ
 from process_running_state.bpmn_model import BPMNModel
-from process_running_state.markovian_marking import MarkovianMarking
+from process_running_state.n_gram_index import NGramIndex
 from process_running_state.reachability_graph import ReachabilityGraph
 from process_running_state.utils import read_bpmn_model
 
@@ -106,7 +106,7 @@ def compute_current_states(
         for n_size in _n_gram_sizes(dataset, discovery_extension):
             # Compute n-gram index
             print(f"- Building {n_size}-gram index -")
-            markovian_marking, runtime_avg, runtime_cnf = compute_markovian_marking(reachability_graph, n_size)
+            n_gram_index, runtime_avg, runtime_cnf = compute_n_gram_index(reachability_graph, n_size)
             with open(output_filename, 'a') as output_file:
                 output_file.write(f"\"build-{n_size}-gram-index\",,,{runtime_avg},{runtime_cnf}\n")
             # Estimate states
@@ -118,7 +118,7 @@ def compute_current_states(
                     # Get n-gram
                     n_gram = list(events.tail(min(len(events), n_size))[log_ids.activity])
                     # Estimate with n-gram index
-                    state, runtime_avg, runtime_cnf = get_state_markovian_marking(markovian_marking, n_gram)
+                    state, runtime_avg, runtime_cnf = get_state_n_gram_index(n_gram_index, n_gram)
                     total_runtime += runtime_avg
                     # Output to file
                     output_file.write(f"\"{n_size}-gram-index\",\"{trace_id}\",\"{state}\",{runtime_avg},{runtime_cnf}\n")
@@ -175,25 +175,25 @@ def compute_reachability_graph(bpmn_model: BPMNModel) -> Tuple[ReachabilityGraph
     return final_reachability_graph, runtime_avg, runtime_cnf
 
 
-def compute_markovian_marking(
+def compute_n_gram_index(
         reachability_graph: ReachabilityGraph,
         n_gram_size_limit: int
-) -> Tuple[MarkovianMarking, float, float]:
+) -> Tuple[NGramIndex, float, float]:
     """Compute the n-gram indexing of the given BPMN model"""
     runtimes = []
-    final_markovian_marking = None
+    final_n_gram_index = None
     # Compute state number_of_runs times
     for i in range(number_of_runs):
         start = time.time()
-        markovian_marking = MarkovianMarking(reachability_graph, n_gram_size_limit)
-        markovian_marking.build()
+        n_gram_index = NGramIndex(reachability_graph, n_gram_size_limit)
+        n_gram_index.build()
         end = time.time()
         runtimes += [end - start]
         if i == number_of_runs - 1:
-            final_markovian_marking = markovian_marking
+            final_n_gram_index = n_gram_index
     # Compute runtime confidence interval
     runtime_avg, runtime_cnf = compute_mean_conf_interval(runtimes)
-    return final_markovian_marking, runtime_avg, runtime_cnf
+    return final_n_gram_index, runtime_avg, runtime_cnf
 
 
 def get_state_prefix_alignment(
@@ -237,8 +237,8 @@ def get_state_prefix_alignment(
     return state, runtime_avg, runtime_cnf
 
 
-def get_state_markovian_marking(
-        markovian_marking: MarkovianMarking,
+def get_state_n_gram_index(
+        n_gram_index: NGramIndex,
         n_gram: List[str]
 ) -> Tuple[Set[str], float, float]:
     """Compute the state of an ongoing case with the n-gram indexing technique (our proposal)."""
@@ -247,7 +247,7 @@ def get_state_markovian_marking(
     # Compute state number_of_runs times
     for i in range(number_of_runs):
         start = time.time()
-        result = markovian_marking.get_best_marking_state_for(n_gram)
+        result = n_gram_index.get_best_marking_state_for(n_gram)
         end = time.time()
         runtimes += [end - start]
         if i == number_of_runs - 1:

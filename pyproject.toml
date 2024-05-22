@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "process-running-state"
-version = "0.4.3"
-description = "Compute the running state (marking) of a trace."
+version = "0.5.0"
+description = "Build the n-gram index of a BPMN process model to compute the state of an ongoing case in constant time."
 authors = ["David Chapela de la Campa <david.chapela.delacampa@gmail.com>"]
 readme = "README.md"
 

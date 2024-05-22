@@ -6,7 +6,7 @@ from typing import Set, List
 from process_running_state.reachability_graph import ReachabilityGraph
 
 
-class MarkovianMarking:
+class NGramIndex:
     TRACE_START = "DEFAULT_TRACE_START_LABEL"
 
     def __init__(self, graph: ReachabilityGraph, n_gram_size_limit: int = 5):
@@ -60,7 +60,7 @@ class MarkovianMarking:
         # Filter out nonexistent (in the reachability graph) activities
         n_gram = [label for label in n_gram if label in self.graph.activity_to_edges]
         # Initialize estimated marking to initial marking (if no other marking found, that's default)
-        final_marking = self.get_marking_state([MarkovianMarking.TRACE_START])[0]
+        final_marking = self.get_marking_state([NGramIndex.TRACE_START])[0]
         stop_search = False
         k = 1
         # Search iteratively for a deterministic marking
@@ -83,7 +83,7 @@ class MarkovianMarking:
 
     def build(self):
         """
-        Build the markovian marking mapping for the reachability graph in [self.graph] and with the n-limit stored in
+        Build the n-gram index mapping for the reachability graph in [self.graph] and with the n-limit stored in
         [self.n_gram_size_limit].
         """
         # Initialize stacks
@@ -104,7 +104,7 @@ class MarkovianMarking:
                 target_marking = target_marking_stack.pop()
                 # If this marking is the initial marking, save corresponding association
                 if marking_id == self.graph.initial_marking_id:
-                    current_n_gram = [MarkovianMarking.TRACE_START] + previous_n_gram
+                    current_n_gram = [NGramIndex.TRACE_START] + previous_n_gram
                     self.add_association(current_n_gram, target_marking)
                 # Grow n-gram with each incoming edge
                 for edge_id in self.graph.incoming_edges[marking_id]:
@@ -143,9 +143,9 @@ class MarkovianMarking:
                 output_file.write(f"{str(n_gram)} : {str(markings)}\n")
 
     @staticmethod
-    def from_self_contained_map_file(file_path: Path, reachability_graph: ReachabilityGraph) -> 'MarkovianMarking':
+    def from_self_contained_map_file(file_path: Path, reachability_graph: ReachabilityGraph) -> 'NGramIndex':
         # Instantiate the marking
-        markovian_marking = MarkovianMarking(reachability_graph, 0)
+        n_gram_index = NGramIndex(reachability_graph, 0)
         # Go over file line by line
         with open(file_path, "r") as input_file:
             for line in input_file:
@@ -155,11 +155,11 @@ class MarkovianMarking:
                     if match:
                         key = ast.literal_eval(f"({match.group(1)})")
                         value = ast.literal_eval(f"[{match.group(2)}]")
-                        markovian_marking.markings[key] = {
+                        n_gram_index.markings[key] = {
                             reachability_graph.marking_to_key[tuple(sorted(marking))]
                             for marking in value
                         }
                     else:
                         raise RuntimeError(f"Problem with format of line: {line}.")
-        # Return read markovian marking
-        return markovian_marking
+        # Return read n-gram index
+        return n_gram_index
