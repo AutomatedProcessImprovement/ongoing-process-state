@@ -77,15 +77,18 @@ def test_advance_full_marking_simple_model():
     bpmn_model = _bpmn_model_with_AND_and_XOR()
     # Advance from state where the AND-split is enabled: it should execute it enabling both branches
     markings = bpmn_model.advance_full_marking({"3"})
-    assert markings == [{"5", "6"}]
+    assert len(markings) == 2
+    assert markings["7"] == {"5", "6"}
+    assert markings["8"] == {"5", "6"}
     # Advance from state where the AND-join is enabled: it should execute both the AND-join and following XOR-split
     markings = bpmn_model.advance_full_marking({"9", "10"})
     assert len(markings) == 2
-    assert {"14"} in markings
-    assert {"15"} in markings
+    assert markings["16"] == {"14"}
+    assert markings["17"] == {"15"}
     # Advance from state where only one task is enabled: no advance
     markings = bpmn_model.advance_full_marking({"21"})
-    assert markings == [{"21"}]
+    assert len(markings) == 1
+    assert markings["22"] == {"21"}
 
 
 def test_advance_marking_until_decision_point_XOR_within_AND_model():
@@ -108,22 +111,23 @@ def test_advance_full_marking_XOR_within_AND_model():
     bpmn_model = _bpmn_model_with_XOR_within_AND()
     # Advance from state where only one task is enabled: no advance
     markings = bpmn_model.advance_full_marking({"1"})
-    assert markings == [{"1"}]
+    assert len(markings) == 1
+    assert markings["2"] == {"1"}
     # Advance from state where the AND-split is enabled: it should execute the AND-split and each following XOR-split
     markings = bpmn_model.advance_full_marking({"3"})
     assert len(markings) == 6
-    assert {"11", "6", "7"} in markings
-    assert {"12", "6", "7"} in markings
-    assert {"5", "13", "7"} in markings
-    assert {"5", "14", "7"} in markings
-    assert {"5", "6", "15"} in markings
-    assert {"5", "6", "16"} in markings
+    assert markings["17"] == {"11", "6", "7"}
+    assert markings["18"] == {"12", "6", "7"}
+    assert markings["19"] == {"5", "13", "7"}
+    assert markings["20"] == {"5", "14", "7"}
+    assert markings["21"] == {"5", "6", "15"}
+    assert markings["22"] == {"5", "6", "16"}
     # Advance from state where only the XOR-join of 2 branches are enabled: it should advance until the AND-join
     markings = bpmn_model.advance_full_marking({"23", "26", "16"})
-    assert markings == [{"32", "33", "16"}]
+    assert markings["22"] == {"32", "33", "16"}
     # Advance from state where the three XOR-join are enabled: it should execute the XOR-join and AND-join
     markings = bpmn_model.advance_full_marking({"23", "26", "28"})
-    assert markings == [{"36"}]
+    assert markings["37"] == {"36"}
 
 
 def test_advance_marking_until_decision_point_nested_XOR_model():
@@ -143,16 +147,18 @@ def test_advance_full_marking_nested_XOR_model():
     bpmn_model = _bpmn_model_with_AND_and_nested_XOR()
     # Advance from state where the AND-split is enabled: it should execute it enabling both branches
     markings = bpmn_model.advance_full_marking({"3"})
-    assert len(markings) == 3
-    assert {"6", "8"} in markings
-    assert {"6", "12"} in markings
-    assert {"6", "13"} in markings
+    assert len(markings) == 4
+    assert markings["10"] == {"8", "6"}
+    assert markings["14"] == {"12", "6"}
+    assert markings["15"] == {"13", "6"}
+    assert markings["19"] == {"4", "6"}
     # Advance from state where one of the upper XOR-join is enabled: it should execute the XOR-join (not the AND-join)
     markings = bpmn_model.advance_full_marking({"6", "16"})
-    assert markings == [{"6", "21"}]
+    assert len(markings) == 1
+    assert markings["19"] == {"6", "21"}
     # Advance from state where one of the upper XOR-join is enabled and the lower AND branch: should fully advance
     markings = bpmn_model.advance_full_marking({"17", "20"})
-    assert markings == [{"27"}]
+    assert markings["23"] == {"27"}
 
 
 def test_advance_marking_until_decision_point_loop_model():
@@ -172,18 +178,23 @@ def test_advance_full_marking_loop_model():
     bpmn_model = _bpmn_model_with_loop_inside_AND()
     # Advance from state where the AND-split is enabled: should execute it and advance through the XOR-join branch
     markings = bpmn_model.advance_full_marking({"3"})
-    assert markings == [{"9", "6"}]
+    assert len(markings) == 2
+    assert markings["10"] == {"9", "6"}
+    assert markings["8"] == {"9", "6"}
     # Advance from state where the loop XOR is enabled, it should generate both states going back (loop) and forward
     markings = bpmn_model.advance_full_marking({"11", "6"})
-    assert markings == [{"9", "6"}]
+    assert len(markings) == 2
+    assert markings["10"] == {"9", "6"}
+    assert markings["8"] == {"11", "6"}
     # Advance from state where the loop XOR is enabled, it should generate both states going back (loop) and forward
     markings = bpmn_model.advance_full_marking({"11", "15"})
     assert len(markings) == 2
-    assert {"9", "15"} in markings
-    assert {"17"} in markings
+    assert markings["10"] == {"9", "15"}
+    assert markings["18"] == {"17"}
     # Advance from state where only one task is enabled: no advance
     markings = bpmn_model.advance_full_marking({"17"})
-    assert markings == [{"17"}]
+    assert len(markings) == 1
+    assert markings["18"] == {"17"}
 
 
 def test_advance_marking_until_decision_point_double_loop_model():
@@ -206,7 +217,9 @@ def test_advance_full_marking_double_loop_model():
     bpmn_model = _bpmn_model_with_two_loops_inside_AND_followed_by_XOR_within_AND()
     # Advance from state where the AND-split is enabled: should execute it and advance through the XOR-join branch
     markings = bpmn_model.advance_full_marking({"3"})
-    assert markings == [{"9", "10"}]
+    assert len(markings) == 2
+    assert markings["11"] == {"9", "10"}
+    assert markings["12"] == {"9", "10"}
     # Advance from state where both loop XOR are enabled, it should:
     # - Traverse one of them going back individually (the other does not advance)
     # - Traverse the other going back individually (the first one does not advance)
@@ -215,12 +228,12 @@ def test_advance_full_marking_double_loop_model():
     #   - The other branch advances (two combinations) while the first one holds
     markings = bpmn_model.advance_full_marking({"13", "14"})
     assert len(markings) == 6
-    assert {"9", "14"} in markings
-    assert {"13", "10"} in markings
-    assert {"28", "25"} in markings
-    assert {"29", "25"} in markings
-    assert {"24", "30"} in markings
-    assert {"24", "31"} in markings
+    assert markings["11"] == {"9", "14"}
+    assert markings["12"] == {"13", "10"}
+    assert markings["32"] == {"28", "25"}
+    assert markings["33"] == {"29", "25"}
+    assert markings["34"] == {"24", "30"}
+    assert markings["35"] == {"24", "31"}
 
 
 def test_advance_marking_until_decision_point_triple_loop_model():
@@ -239,11 +252,16 @@ def test_advance_marking_until_decision_point_triple_loop_model():
 def test_advance_full_marking_triple_loop_model():
     bpmn_model = _bpmn_model_with_three_loops_inside_AND_two_of_them_inside_sub_AND()
     # Advance from initial marking: should traverse the AND-split and one XOR-join
-    marking = bpmn_model.advance_marking_until_decision_point({"1"})
-    assert marking == {"3", "26"}
+    marking = bpmn_model.advance_full_marking({"1"})
+    assert len(marking) == 2
+    assert marking["5"] == {"3", "26"}
+    assert marking["27"] == {"3", "26"}
     # Advance from state where second AND-split is enabled and lower branch is before loop: should traverse all
-    marking = bpmn_model.advance_marking_until_decision_point({"7", "4"})
-    assert marking == {"13", "14", "26"}
+    marking = bpmn_model.advance_full_marking({"7", "4"})
+    assert len(marking) == 3
+    assert marking["15"] == {"13", "14", "26"}
+    assert marking["16"] == {"13", "14", "26"}
+    assert marking["27"] == {"13", "14", "26"}
     # Advance from state where the three loop XOR-split are enabled, it should:
     # - Traverse one of them going back individually (the other two do not advance)
     # - Traverse the second one going back individually (the other two do not advance)
@@ -251,10 +269,10 @@ def test_advance_full_marking_triple_loop_model():
     # - Traverse the two that end in the same AND-join together, and the AND-join too (the other branch holds)
     markings = bpmn_model.advance_full_marking({"17", "18", "28"})
     assert len(markings) == 4
-    assert {"13", "18", "28"} in markings
-    assert {"17", "14", "28"} in markings
-    assert {"17", "18", "26"} in markings
-    assert {"31", "28"} in markings
+    assert markings["15"] == {"13", "18", "28"}
+    assert markings["16"] == {"17", "14", "28"}
+    assert markings["27"] == {"17", "18", "26"}
+    assert markings["32"] == {"31", "28"}
 
 
 def test_reachability_graph_simple():

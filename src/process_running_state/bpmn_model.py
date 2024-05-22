@@ -84,6 +84,7 @@ class BPMNModel:
         # Params for cached reachability graph search
         self._cached_search: bool = True
         self._advance_marking_cache = dict()
+        self._advance_combination_cache = dict()
 
     def add_task(self, task_id: str, task_name: str):
         if task_id not in self.id_to_node:
@@ -257,7 +258,7 @@ class BPMNModel:
             self,
             marking: Set[str],
             explored_markings: Optional[Set[Tuple[str]]] = None,
-    ) -> List[Set[str]]:
+    ) -> Dict[str, Set[str]]:
         """
         Advance the current marking as much as possible without executing any task, i.e., execute gateways until there
         are none enabled. If there are multiple (parallel) branches, first advance in each of them individually, and
@@ -267,33 +268,36 @@ class BPMNModel:
 
         :param marking: marking to consider as starting point to perform the advance operation.
         :param explored_markings: if recursive call, set of previously explored markings to avoid infinite loop.
-        :return: list with the different markings result of such advancement.
+        :return: map with the ID of an enabled task/event as key and the advanced marking that enables it as value. When
+        more than one advancement lead to enabling the same activity, only the one of them advancing fewer branches is
+        reported.
         """
+        # Instantiate dictionary for
+        final_markings_map: Dict[str, Set[str]] = dict()
         # First advance all branches at the same time until tasks, events, or decision points (XOR-split/OR-split)
         advanced_marking = self.advance_marking_until_decision_point(marking)
+        # Save current marking for enabled tasks/events
+        for enabled_node_id in self.get_enabled_tasks_events(advanced_marking):
+            final_markings_map[enabled_node_id] = advanced_marking
         # Advance all branches together (getting all combinations of advancements)
-        fully_advanced_markings = self._advance_marking(advanced_marking, explored_markings)
-        # For each branch, try to rollback the advancements in other branches as much as possible
-        if fully_advanced_markings == [advanced_marking] or len(advanced_marking) == 1:
-            # If the marking did not advance, or there is only one branch, no need to try to rollback other branches
-            final_markings = fully_advanced_markings
-        else:
-            final_markings = self._try_rollback(advanced_marking, fully_advanced_markings)
-        # Keep only final markings that enabled new tasks/events, otherwise the advancement is useless
-        filtered_final_markings = []
-        enabled_in_marking = self.get_enabled_tasks_events(advanced_marking)
-        for final_marking in final_markings:
-            enabled_in_final_marking = self.get_enabled_tasks_events(final_marking)
-            if enabled_in_marking != enabled_in_final_marking:
-                filtered_final_markings += [final_marking]
+        fully_advanced_markings_map = self._advance_marking(advanced_marking, explored_markings)
+        # Save only advanced marking that enabled new tasks/events
+        for enabled_node_id in fully_advanced_markings_map:
+            if enabled_node_id not in final_markings_map:
+                # Retrieve fully advanced marking
+                fully_advanced_marking = fully_advanced_markings_map[enabled_node_id]
+                # Try to rollback the advancements in other branches as much as possible
+                rollbacked_marking = self._try_rollback(fully_advanced_marking, advanced_marking, enabled_node_id)
+                # Save rollbacked marking
+                final_markings_map[enabled_node_id] = rollbacked_marking
         # Return final markings (if none of them enabled any new tasks/events return original marking)
-        return filtered_final_markings if len(filtered_final_markings) > 0 else [advanced_marking]
+        return final_markings_map
 
     def _advance_marking(
             self,
             marking: Set[str],
             explored_markings: Optional[Set[Tuple[str]]] = None,
-    ) -> List[Set[str]]:
+    ) -> Dict[str, Set[str]]:
         """
         Advance the current marking as much as possible without executing any task, i.e., execute gateways until there
         are none enabled.
@@ -304,22 +308,153 @@ class BPMNModel:
 
         :param marking: marking to consider as starting point to perform the advance operation.
         :param explored_markings: if recursive call, set of previously explored markings to avoid infinite loop.
-        :return: list with the different markings result of such advancement.
+        :return: map with the ID of an enabled task/event as key and the advanced marking that enables it as value. When
+        more than one advancement lead to enabling the same activity, only the one of them advancing fewer branches is
+        reported.
         """
         # If result in cache, retrieve, otherwise compute
         marking_key = tuple(sorted(marking))
         if self._cached_search and marking_key in self._advance_marking_cache:
-            final_markings = self._advance_marking_cache[marking_key]
+            final_markings_map = self._advance_marking_cache[marking_key]
         else:
             # Initialize breath-first search list
-            current_markings = [marking]
+            current_marking_stack = [marking]
             explored_markings = set() if explored_markings is None else explored_markings
+            final_markings_map: Dict[str, Set[str]] = dict()
+            # Run propagation until no more gateways can be fired
+            while current_marking_stack:
+                next_marking_stack = []
+                # For each marking
+                for current_marking in current_marking_stack:
+                    # If it hasn't been explored
+                    current_marking_key = tuple(sorted(current_marking))
+                    if current_marking_key not in explored_markings:
+                        # Add it to explored
+                        explored_markings.add(current_marking_key)
+                        # Get enabled gateways
+                        enabled_gateways = [
+                            node_id
+                            for node_id in self.get_enabled_nodes(current_marking) if
+                            self.id_to_node[node_id].is_gateway()
+                        ]
+                        # If no enabled gateways, save fully advanced marking
+                        if len(enabled_gateways) == 0:
+                            for enabled_node_id in self.get_enabled_nodes(current_marking):
+                                if enabled_node_id not in final_markings_map:
+                                    final_markings_map[enabled_node_id] = current_marking
+                        else:
+                            # Otherwise, execute one of the enabled gateways and save result for next iteration
+                            gateway_id = enabled_gateways.pop()
+                            gateway = self.id_to_node[gateway_id]
+                            if (gateway.is_AND() or gateway.is_OR()) and gateway.is_split():
+                                # AND-split/OR-split: traverse it
+                                advanced_markings = self.simulate_execution(gateway_id, current_marking)
+                                # For each advanced markings (after gateway split)
+                                for advanced_marking in advanced_markings:
+                                    # Advance fully
+                                    advanced_markings_map = self.advance_full_marking(advanced_marking,
+                                                                                      explored_markings)
+                                    # Save advancements that were needed to enable new activities
+                                    for enabled_node_id in advanced_markings_map:
+                                        if enabled_node_id not in final_markings_map:
+                                            final_markings_map[enabled_node_id] = advanced_markings_map[enabled_node_id]
+                            else:
+                                # JOINs or XOR-split, execute and continue with advancement
+                                next_marking_stack += self.simulate_execution(gateway_id, current_marking)
+                # Update new marking stack
+                current_marking_stack = next_marking_stack
+            # Save if using cache
+            if self._cached_search:
+                self._advance_marking_cache[marking_key] = final_markings_map
+        # Return final set
+        return final_markings_map
+
+    def _try_rollback(self, advanced_marking: Set[str], marking: Set[str], enabled_node_id: str) -> Set[str]:
+        """
+        Given an advanced marking and the node for which it advanced, try to rollback the advancement of as much
+        branches as possible while keeping the node enabled. In this way, the marking still enables the desired node,
+        and all the other branches remain as if they did not advance, only the required ones to enabled the desired
+        node remain advanced.
+
+        For example, imagine marking={1,2}, {1} advances to {3} and {4}, and {2} advances to {5} and {6}.
+        Then, advanced_markings=[{3,5},{3,6},{4,5},{4,6}], and the objective is to rollback first the advancements of
+        {1}, and then of {2}, so the result is [{1,5},{1,6},{3,2},{4,2}].
+
+        For this, the method has to find the smaller combination of branches that, when advanced isolated, enable the
+        desired node. Then, identify the remaining branches, advance them individually, and rollback such advancement.
+        In this way, we ensure that when many parallel branches need to join (in an AND-join), they are advanced
+        together.
+
+        :param advanced_marking: advanced marking result of advancing the branches in [marking] as much as possible.
+        :param marking: marking considered as starting point.
+        :param enabled_node_id: identifier of the node that is enabled and must remain enabled.
+        :return: rollbacked marking.
+        """
+        rollbacked_marking = set()
+        # Retrieve edge enabling current activity
+        enabling_flows = self.id_to_node[enabled_node_id].incoming_flows & advanced_marking
+        assert len(enabling_flows) == 1, f"Many enabled flows ({enabling_flows}) for one task/event ({enabled_node_id})"
+        enabling_flow_id = enabling_flows.pop()
+        # Generate all possible branch combinations to explore individually
+        branch_combinations = [
+            combination
+            for combination in _powerset(marking)
+            if combination != marking
+        ]
+        branch_combinations.sort(key=len)  # Sort ascending to find the smaller one first
+        # Identify the combination of branches needed for the enabling branch to advance
+        advanced_combination = set(marking)  # If no other smaller combination found, all branches were needed
+        found = False
+        for branch_combination in branch_combinations:
+            if not found:
+                # Advance with this branch combination
+                for advanced_marking_with_branch_combination in self._advance_combination(branch_combination):
+                    # If the advancement reached the enabling flow
+                    reached_enabling_flow = enabling_flow_id in advanced_marking_with_branch_combination
+                    # and the advanced marking with these branch combination is all in the advanced marking
+                    advanced_is_subset = advanced_marking_with_branch_combination.issubset(advanced_marking)
+                    if not found and reached_enabling_flow and advanced_is_subset:
+                        # All these branches were needed to advance current one, save to not rollback them
+                        found = True
+                        advanced_combination = branch_combination
+        # Rollback the advancements that were also reached when advancing the other branches
+        other_branches = marking - advanced_combination
+        rollbacked = False
+        if len(other_branches) > 0:
+            for advanced_marking_other_branches in self._advance_combination(other_branches):
+                if not rollbacked and advanced_marking_other_branches.issubset(advanced_marking):
+                    # This advancement is independent of the current branch, rollback it
+                    rollbacked = True
+                    rollbacked_marking = advanced_marking - advanced_marking_other_branches | other_branches
+            assert rollbacked, f"Could not rollback branches {other_branches} from {advanced_marking}"
+        else:
+            # If it was not rollbacked (i.e., all branches needed to advance until that point), keep it
+            rollbacked_marking = advanced_marking
+        # Return final markings
+        return rollbacked_marking
+
+    def _advance_combination(self, combination: Set[str]) -> List[Set[str]]:
+        """
+        Advance a combination of branches as much as possible, executing all enabled gateways, generating all
+        combinations of advanced branches until no more gateways are enabled.
+
+        :param combination: marking to consider as starting point to perform the advance operation.
+        :return: list with the different markings result of such advancement.
+        """
+        # If result in cache, retrieve, otherwise compute
+        combination_key = tuple(sorted(combination))
+        if self._cached_search and combination_key in self._advance_combination_cache:
+            final_markings = self._advance_combination_cache[combination_key]
+        else:
+            # Initialize breath-first search list
+            current_marking_stack = [combination]
+            explored_markings = set()
             final_markings = []
             # Run propagation until no more gateways can be fired
-            while current_markings:
-                next_markings = []
+            while current_marking_stack:
+                next_marking_stack = []
                 # For each marking
-                for current_marking in current_markings:
+                for current_marking in current_marking_stack:
                     # If it hasn't been explored
                     current_marking_key = tuple(sorted(current_marking))
                     if current_marking_key not in explored_markings:
@@ -337,93 +472,14 @@ class BPMNModel:
                         else:
                             # Otherwise, execute one of the enabled gateways and save result for next iteration
                             gateway_id = enabled_gateways.pop()
-                            gateway = self.id_to_node[gateway_id]
-                            if (gateway.is_AND() or gateway.is_OR()) and gateway.is_split():
-                                # AND-split/OR-split: traverse it
-                                advanced_markings = self.simulate_execution(gateway_id, current_marking)
-                                # For each advanced markings (after gateway split)
-                                for advanced_marking in advanced_markings:
-                                    final_markings += self.advance_full_marking(advanced_marking, explored_markings)
-                            else:
-                                # JOINs or XOR-split, execute and continue with advancement
-                                next_markings += self.simulate_execution(gateway_id, current_marking)
+                            next_marking_stack += self.simulate_execution(gateway_id, current_marking)
                 # Update new marking stack
-                current_markings = next_markings
+                current_marking_stack = next_marking_stack
             # Save if using cache
             if self._cached_search:
-                self._advance_marking_cache[marking_key] = final_markings
+                self._advance_combination_cache[combination_key] = final_markings
         # Return final set
         return final_markings
-
-    def _try_rollback(self, marking: Set[str], advanced_markings: List[Set[str]]) -> List[Set[str]]:
-        """
-        For each of the advanced markings in [advanced_markings], leaving the advancement result of one of the original
-        branches (from [marking]) untouched, rollback the independent advancements of other branches as much as
-        possible.
-
-        For example, imagine marking={1,2}, {1} advances to {3} and {4}, and {2} advances to {5} and {6}.
-        Then, advanced_markings=[{3,5},{3,6},{4,5},{4,6}], and the objective is to rollback first the advancements of
-        {1}, and then of {2}, so the result is [{1,5},{1,6},{3,2},{4,2}].
-
-        For this, the method has to, for each branch, advance as much as possible in all combinations of the others,
-        and rollback when one of the combinations (the one involving more branches) is part of the fully advanced
-        marking. In this way we ensure that when many branches join (AND-join), they are advanced together.
-
-        :param marking: marking considered as starting point.
-        :param advanced_markings: list of markings result of advancing all branches in [marking] as much as possible.
-        :return: list of rollbacked markings.
-        """
-        final_markings_keys = set()
-        # Generate all possible branch combinations to explore individually
-        branch_combinations = [
-            combination
-            for combination in _powerset(marking)
-            if combination != marking
-        ]
-        # For each branch in the non-advanced marking
-        for branch_flow_id in marking:
-            # Get combinations that include own branch
-            own_branch_combinations = [
-                combination
-                for combination in branch_combinations
-                if branch_flow_id in combination
-            ]
-            own_branch_combinations.sort(key=len)  # Sort ascending to find the smaller one first
-            # Get advanced markings where this branch advanced (if it didn't advance, no need to rollback the others)
-            filtered_advanced_markings = [
-                advanced_marking
-                for advanced_marking in advanced_markings if
-                branch_flow_id not in advanced_marking
-            ]
-            # From each advanced marking (where this branch also advanced)
-            for advanced_marking in filtered_advanced_markings:
-                # Identify the combination of branches needed for this branch to advance in this advanced marking
-                advanced_combination = set(marking)  # If no other smaller combination found, all branches were needed
-                found = False
-                for own_branch_combination in own_branch_combinations:
-                    if not found:
-                        advanced_markings_with_own_branch = self._advance_marking(own_branch_combination)
-                        for advanced_marking_with_own_branch in advanced_markings_with_own_branch:
-                            if not found and advanced_marking_with_own_branch.issubset(advanced_marking):
-                                # All these branches were needed to advance current one, save to not rollback them
-                                found = True
-                                advanced_combination = own_branch_combination
-                # Try to rollback the advancements that were also reached when advancing the other branches
-                other_branches = marking - advanced_combination
-                rollbacked = False
-                if len(other_branches) > 0:
-                    advanced_markings_other_branches = self._advance_marking(other_branches)
-                    for advanced_marking_other_branch in advanced_markings_other_branches:
-                        if not rollbacked and advanced_marking_other_branch.issubset(advanced_marking):
-                            # This advancement is independent of the current branch, rollback it
-                            rollbacked = True
-                            rollbacked_marking = advanced_marking - advanced_marking_other_branch | other_branches
-                            final_markings_keys |= {tuple(sorted(rollbacked_marking))}
-                else:
-                    # If it was not rollbacked (i.e., all branches needed to advance until that point), keep it
-                    final_markings_keys |= {tuple(sorted(advanced_marking))}
-        # Return final markings
-        return [set(final_marking) for final_marking in final_markings_keys]
 
     def get_reachability_graph(self, cached_search: bool = True) -> ReachabilityGraph:
         """
@@ -437,54 +493,37 @@ class BPMNModel:
         self._advance_marking_cache = dict()
         # Get initial BPMN marking and instantiate reachability graph
         initial_marking = self.get_initial_marking()
-        initial_reference_marking = self.advance_marking_until_decision_point(initial_marking)
+        initial_advanced_marking = self.advance_marking_until_decision_point(initial_marking)
         graph = ReachabilityGraph()
-        graph.add_marking(initial_reference_marking, is_initial=True)
-        # Advance the initial marking (executing enabled gateways) and save them for exploration
-        advanced_marking_stack = []
-        reference_marking_stack = []
-        for advanced_marking in self.advance_full_marking(initial_reference_marking):
-            advanced_marking_stack += [advanced_marking]
-            reference_marking_stack += [initial_reference_marking]
+        graph.add_marking(initial_advanced_marking, is_initial=True)
         # Start exploration, for each "reference" marking, simulate in its corresponding advanced markings
+        marking_stack = [initial_advanced_marking]
         explored_markings = set()
-        explored_reference_markings = set()
-        while len(advanced_marking_stack) > 0:
+        while len(marking_stack) > 0:
             # Retrieve current markings
-            current_marking = advanced_marking_stack.pop()  # The marking to simulate over
-            reference_marking = reference_marking_stack.pop()  # Corresponding marking to use in the reachability graph
-            advanced_branches = current_marking - reference_marking
-            original_branches = reference_marking - current_marking
+            current_marking = marking_stack.pop()  # This marking is already advanced to decision points
             # If this marking hasn't been explored (reference marking + advanced marking)
-            exploration_key = (tuple(sorted(reference_marking)), tuple(sorted(current_marking)))
+            exploration_key = tuple(sorted(current_marking))
             if exploration_key not in explored_markings:
                 # Add it to explored
                 explored_markings.add(exploration_key)
-                # Fire all enabled activity/events and save new markings
-                for enabled_node_id in self.get_enabled_nodes(current_marking):
+                # Advance the current marking, executing enabled gateways, obtaining:
+                #   An activity enabled by the advancement
+                #   The advanced marking needed to execute the activity
+                advanced_markings = self.advance_full_marking(current_marking)
+                # For each pair of enabled activity and advanced marking that enables it
+                for enabled_node_id in advanced_markings:
                     enabled_node = self.id_to_node[enabled_node_id]
-                    if enabled_node.is_task() or enabled_node.is_event():
-                        # Fire task/event (always returns 1 marking)
-                        [new_marking] = self.simulate_execution(enabled_node_id, current_marking)
-                        # Advance the marking as much as possible without executing decision points (XOR-split/OR-split)
-                        new_reference_marking = self.advance_marking_until_decision_point(new_marking)
-                        if len(advanced_branches) > 0 and advanced_branches.issubset(new_reference_marking):
-                            new_reference_marking = new_reference_marking - advanced_branches | original_branches
-                        # Update reachability graph
-                        graph.add_marking(new_reference_marking)  # Add reference marking to graph
-                        graph.add_edge(enabled_node.name, reference_marking, new_reference_marking)
-                        # If the new_reference_marking was already advanced, no need to repeat
-                        new_reference_marking_key = tuple(sorted(new_reference_marking))
-                        if new_reference_marking_key not in explored_reference_markings:
-                            # Add it to explored
-                            explored_reference_markings.add(new_reference_marking_key)
-                            # Advance the marking as much as possible (executing any enabled gateway)
-                            new_advanced_markings = self.advance_full_marking(new_reference_marking)
-                            # For each new marking
-                            for new_advanced_marking in new_advanced_markings:
-                                # Save new marking
-                                advanced_marking_stack += [new_advanced_marking]
-                                reference_marking_stack += [new_reference_marking]
+                    advanced_marking = advanced_markings[enabled_node_id]
+                    # Fire task/event (always returns 1 marking)
+                    [new_marking] = self.simulate_execution(enabled_node_id, advanced_marking)
+                    # Advance the marking as much as possible without executing decision points (XOR-split/OR-split)
+                    new_advanced_marking = self.advance_marking_until_decision_point(new_marking)
+                    # Update reachability graph
+                    graph.add_marking(new_advanced_marking)  # Add reference marking to graph
+                    graph.add_edge(enabled_node.name, current_marking, new_advanced_marking)
+                    # Save to continue exploring it
+                    marking_stack += [new_advanced_marking]
         # Return reachability graph
         return graph
 
