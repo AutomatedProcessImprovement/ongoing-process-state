@@ -210,11 +210,11 @@ def get_state_prefix_alignment(
     # Compute state number_of_runs times
     for i in range(number_of_runs):
         start = time.time()
-        if alignment_type == AlignmentType.IASR:
+        if alignment_type == AlignmentType.IAS:
             result = calculate_prefix_alignment_modified_a_star_with_heuristic(trace, pnml_model,
                                                                                initial_marking,
                                                                                final_marking)
-        elif alignment_type == AlignmentType.IAS:
+        elif alignment_type == AlignmentType.IASR:
             result = calculate_prefix_alignment_modified_a_star_with_heuristic_without_recalculation(trace, pnml_model,
                                                                                                      initial_marking,
                                                                                                      final_marking)
