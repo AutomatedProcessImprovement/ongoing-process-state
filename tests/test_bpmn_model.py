@@ -3,7 +3,7 @@ from test_bpmn_model_fixtures import _bpmn_model_with_AND_and_XOR, _bpmn_model_w
     _bpmn_model_with_two_loops_inside_AND_followed_by_XOR_within_AND, \
     _bpmn_model_with_three_loops_inside_AND_two_of_them_inside_sub_AND, \
     _bpmn_model_with_loop_inside_parallel_and_loop_all_back, _bpmn_model_with_infinite_loop, \
-    _bpmn_model_with_infinite_loop_and_AND
+    _bpmn_model_with_infinite_loop_and_AND, _bpmn_model_with_optional_AND_with_skipping_and_loop_branches
 
 
 def test_create_bpmn_model():
@@ -571,6 +571,34 @@ def test_reachability_graph_infinite_loop_and_AND():
             reachability_graph.marking_to_key[tuple(sorted({"34"}))]) in edges
     assert (reachability_graph.marking_to_key[tuple(sorted({"28"}))],
             reachability_graph.marking_to_key[tuple(sorted({"34"}))]) in edges
+
+
+def test_reachability_graph_optional_AND_with_skipping_and_loop_branches():
+    bpmn_model = _bpmn_model_with_optional_AND_with_skipping_and_loop_branches()
+    reachability_graph = bpmn_model.get_reachability_graph(cached_search=False)
+    # Assert general sizes
+    assert len(reachability_graph.markings) == 6
+    assert len(reachability_graph.edges) == 10
+    # Assert specific edges
+    edges = {reachability_graph.edges[edge_id] for edge_id in reachability_graph.activity_to_edges["A"]}
+    assert (reachability_graph.marking_to_key[tuple(sorted({"1"}))],
+            reachability_graph.marking_to_key[tuple(sorted({"3"}))]) in edges
+    edges = {reachability_graph.edges[edge_id] for edge_id in reachability_graph.activity_to_edges["C"]}
+    assert (reachability_graph.marking_to_key[tuple(sorted({"3"}))],
+            reachability_graph.marking_to_key[tuple(sorted({"6", "18"}))]) in edges
+    assert (reachability_graph.marking_to_key[tuple(sorted({"6", "18"}))],
+            reachability_graph.marking_to_key[tuple(sorted({"6", "18"}))]) in edges
+    assert (reachability_graph.marking_to_key[tuple(sorted({"21", "16"}))],
+            reachability_graph.marking_to_key[tuple(sorted({"21", "18"}))]) in edges
+    assert (reachability_graph.marking_to_key[tuple(sorted({"21", "18"}))],
+            reachability_graph.marking_to_key[tuple(sorted({"21", "18"}))]) in edges
+    edges = {reachability_graph.edges[edge_id] for edge_id in reachability_graph.activity_to_edges["D"]}
+    assert (reachability_graph.marking_to_key[tuple(sorted({"3"}))],
+            reachability_graph.marking_to_key[tuple(sorted({"28"}))]) in edges
+    assert (reachability_graph.marking_to_key[tuple(sorted({"6", "18"}))],
+            reachability_graph.marking_to_key[tuple(sorted({"28"}))]) in edges
+    assert (reachability_graph.marking_to_key[tuple(sorted({"21", "18"}))],
+            reachability_graph.marking_to_key[tuple(sorted({"28"}))]) in edges
 
 
 def test_reachability_graph_simple_with_cache():
