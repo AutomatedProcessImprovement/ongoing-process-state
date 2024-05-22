@@ -258,7 +258,7 @@ class BPMNModel:
             self,
             marking: Set[str],
             explored_markings: Optional[Set[Tuple[str]]] = None,
-    ) -> Dict[str, Set[str]]:
+    ) -> List[Tuple[str, Set[str]]]:
         """
         Advance the current marking as much as possible without executing any task, i.e., execute gateways until there
         are none enabled. If there are multiple (parallel) branches, first advance in each of them individually, and
@@ -268,36 +268,29 @@ class BPMNModel:
 
         :param marking: marking to consider as starting point to perform the advance operation.
         :param explored_markings: if recursive call, set of previously explored markings to avoid infinite loop.
-        :return: map with the ID of an enabled task/event as key and the advanced marking that enables it as value. When
-        more than one advancement lead to enabling the same activity, only the one of them advancing fewer branches is
-        reported.
+        :return: list of tuples with the ID of an enabled task/event as first element and the advanced marking that
+        enabled it as second element.
         """
-        # Instantiate dictionary for
-        final_markings_map: Dict[str, Set[str]] = dict()
+        # Instantiate list for advanced markings
+        tuples_final_markings = set()
         # First advance all branches at the same time until tasks, events, or decision points (XOR-split/OR-split)
         advanced_marking = self.advance_marking_until_decision_point(marking)
-        # Save current marking for enabled tasks/events
-        for enabled_node_id in self.get_enabled_tasks_events(advanced_marking):
-            final_markings_map[enabled_node_id] = advanced_marking
         # Advance all branches together (getting all combinations of advancements)
-        fully_advanced_markings_map = self._advance_marking(advanced_marking, explored_markings)
+        tuples_fully_advanced_markings = self._advance_marking(advanced_marking, explored_markings)
         # Save only advanced marking that enabled new tasks/events
-        for enabled_node_id in fully_advanced_markings_map:
-            if enabled_node_id not in final_markings_map:
-                # Retrieve fully advanced marking
-                fully_advanced_marking = fully_advanced_markings_map[enabled_node_id]
-                # Try to rollback the advancements in other branches as much as possible
-                rollbacked_marking = self._try_rollback(fully_advanced_marking, advanced_marking, enabled_node_id)
-                # Save rollbacked marking
-                final_markings_map[enabled_node_id] = rollbacked_marking
+        for enabled_node_id, fully_advanced_marking in tuples_fully_advanced_markings:
+            # Try to rollback the advancements in other branches as much as possible
+            rollbacked_marking = self._try_rollback(fully_advanced_marking, advanced_marking, enabled_node_id)
+            # Save rollbacked marking
+            tuples_final_markings |= {(enabled_node_id, tuple(sorted(rollbacked_marking)))}
         # Return final markings (if none of them enabled any new tasks/events return original marking)
-        return final_markings_map
+        return [(enabled_node_id, set(final_marking)) for enabled_node_id, final_marking in tuples_final_markings]
 
     def _advance_marking(
             self,
             marking: Set[str],
             explored_markings: Optional[Set[Tuple[str]]] = None,
-    ) -> Dict[str, Set[str]]:
+    ) -> List[Tuple[str, Set[str]]]:
         """
         Advance the current marking as much as possible without executing any task, i.e., execute gateways until there
         are none enabled.
@@ -308,19 +301,18 @@ class BPMNModel:
 
         :param marking: marking to consider as starting point to perform the advance operation.
         :param explored_markings: if recursive call, set of previously explored markings to avoid infinite loop.
-        :return: map with the ID of an enabled task/event as key and the advanced marking that enables it as value. When
-        more than one advancement lead to enabling the same activity, only the one of them advancing fewer branches is
-        reported.
+        :return: list of tuples with the ID of the enabled task/event as first element, and the advanced marking that
+        enabled it as second element.
         """
         # If result in cache, retrieve, otherwise compute
         marking_key = tuple(sorted(marking))
         if self._cached_search and marking_key in self._advance_marking_cache:
-            final_markings_map = self._advance_marking_cache[marking_key]
+            tuples_final_markings = self._advance_marking_cache[marking_key]
         else:
             # Initialize breath-first search list
             current_marking_stack = [marking]
             explored_markings = set() if explored_markings is None else explored_markings
-            final_markings_map: Dict[str, Set[str]] = dict()
+            set_tuples_final_markings = set()
             # Run propagation until no more gateways can be fired
             while current_marking_stack:
                 next_marking_stack = []
@@ -334,14 +326,15 @@ class BPMNModel:
                         # Get enabled gateways
                         enabled_gateways = [
                             node_id
-                            for node_id in self.get_enabled_nodes(current_marking) if
-                            self.id_to_node[node_id].is_gateway()
+                            for node_id in self.get_enabled_nodes(current_marking)
+                            if self.id_to_node[node_id].is_gateway()
                         ]
                         # If no enabled gateways, save fully advanced marking
                         if len(enabled_gateways) == 0:
-                            for enabled_node_id in self.get_enabled_nodes(current_marking):
-                                if enabled_node_id not in final_markings_map:
-                                    final_markings_map[enabled_node_id] = current_marking
+                            set_tuples_final_markings |= {
+                                (enabled_node_id, tuple(sorted(current_marking)))
+                                for enabled_node_id in self.get_enabled_nodes(current_marking)
+                            }
                         else:
                             # Otherwise, execute one of the enabled gateways and save result for next iteration
                             gateway_id = enabled_gateways.pop()
@@ -351,23 +344,27 @@ class BPMNModel:
                                 advanced_markings = self.simulate_execution(gateway_id, current_marking)
                                 # For each advanced markings (after gateway split)
                                 for advanced_marking in advanced_markings:
-                                    # Advance fully
-                                    advanced_markings_map = self.advance_full_marking(advanced_marking,
-                                                                                      explored_markings)
                                     # Save advancements that were needed to enable new activities
-                                    for enabled_node_id in advanced_markings_map:
-                                        if enabled_node_id not in final_markings_map:
-                                            final_markings_map[enabled_node_id] = advanced_markings_map[enabled_node_id]
+                                    set_tuples_final_markings |= {
+                                        (enabled_node_id, tuple(sorted(fully_advanced_marking)))
+                                        for enabled_node_id, fully_advanced_marking
+                                        in self.advance_full_marking(advanced_marking, explored_markings)
+                                    }
                             else:
                                 # JOINs or XOR-split, execute and continue with advancement
                                 next_marking_stack += self.simulate_execution(gateway_id, current_marking)
                 # Update new marking stack
                 current_marking_stack = next_marking_stack
+            # Remove redundant tuples (str, Set[str])
+            tuples_final_markings = [
+                (node_id, set(final_marking))
+                for node_id, final_marking in set_tuples_final_markings
+            ]
             # Save if using cache
             if self._cached_search:
-                self._advance_marking_cache[marking_key] = final_markings_map
+                self._advance_marking_cache[marking_key] = tuples_final_markings
         # Return final set
-        return final_markings_map
+        return tuples_final_markings
 
     def _try_rollback(self, advanced_marking: Set[str], marking: Set[str], enabled_node_id: str) -> Set[str]:
         """
@@ -426,7 +423,8 @@ class BPMNModel:
                     # This advancement is independent of the current branch, rollback it
                     rollbacked = True
                     rollbacked_marking = advanced_marking - advanced_marking_other_branches | other_branches
-            assert rollbacked, f"Could not rollback branches {other_branches} from {advanced_marking}"
+            if not rollbacked:
+                rollbacked_marking = advanced_marking
         else:
             # If it was not rollbacked (i.e., all branches needed to advance until that point), keep it
             rollbacked_marking = advanced_marking
@@ -510,11 +508,10 @@ class BPMNModel:
                 # Advance the current marking, executing enabled gateways, obtaining:
                 #   An activity enabled by the advancement
                 #   The advanced marking needed to execute the activity
-                advanced_markings = self.advance_full_marking(current_marking)
+                tuples_advanced_markings = self.advance_full_marking(current_marking)
                 # For each pair of enabled activity and advanced marking that enables it
-                for enabled_node_id in advanced_markings:
+                for enabled_node_id, advanced_marking in tuples_advanced_markings:
                     enabled_node = self.id_to_node[enabled_node_id]
-                    advanced_marking = advanced_markings[enabled_node_id]
                     # Fire task/event (always returns 1 marking)
                     [new_marking] = self.simulate_execution(enabled_node_id, advanced_marking)
                     # Advance the marking as much as possible without executing decision points (XOR-split/OR-split)
