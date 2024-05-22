@@ -217,9 +217,9 @@ class BPMNModel:
         return {
             node.id
             for node in self.nodes
-            if (node.is_task() or node.is_event()) and
-               (not node.is_start_event() and not node.is_end_event()) and
-               len(node.incoming_flows & marking) > 0
+            if ((node.is_task() or node.is_event()) and
+                (not node.is_start_event() and not node.is_end_event()) and
+                len(node.incoming_flows & marking) > 0)
         }
 
     def advance_marking_until_decision_point(self, marking: Set[str]) -> Set[str]:
