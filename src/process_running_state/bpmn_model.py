@@ -489,6 +489,7 @@ class BPMNModel:
         """
         self._cached_search = cached_search
         self._advance_marking_cache = dict()
+        self._advance_combination_cache = dict()
         # Get initial BPMN marking and instantiate reachability graph
         initial_marking = self.get_initial_marking()
         initial_advanced_marking = self.advance_marking_until_decision_point(initial_marking)
