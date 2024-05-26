@@ -117,6 +117,9 @@ def compute_current_states(
                 for trace_id, events in event_log_csv.groupby(log_ids.case):
                     # Get n-gram
                     n_gram = list(events.tail(min(len(events), n_size))[log_ids.activity])
+                    if len(n_gram) < n_size:
+                        # Trace is smaller than n_size, add trace start constant to it
+                        n_gram = [NGramIndex.TRACE_START] + n_gram
                     # Estimate with n-gram index
                     state, runtime_avg, runtime_cnf = get_state_n_gram_index(n_gram_index, n_gram)
                     total_runtime += runtime_avg
