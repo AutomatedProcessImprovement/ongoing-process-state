@@ -18,19 +18,19 @@ def compute_state_accuracy(datasets: List[str], noise: Optional[str] = None):
         ongoing_cases_path = Path(f"../inputs/synthetic/split/{dataset}_ongoing.csv.gz")
         if noise is None:
             print(f"\n--- Dataset: {dataset} ---\n")
-            computed_states_path = Path(f"../results/{dataset}_ongoing_states.csv")
-            reachability_graph_path = Path(f"../results/{dataset}_reachability_graph.tgf")
+            computed_states_path = Path(f"../results/synthetic/{dataset}_ongoing_states.csv")
+            reachability_graph_path = Path(f"../results/synthetic/{dataset}_reachability_graph.tgf")
         else:
             print(f"\n--- Dataset: {dataset} ({noise}) ---\n")
-            computed_states_path = Path(f"../results/{dataset}_{noise}_ongoing_states.csv")
-            reachability_graph_path = Path(f"../results/{dataset}_{noise}_reachability_graph.tgf")
+            computed_states_path = Path(f"../results/synthetic/{dataset}_{noise}_ongoing_states.csv")
+            reachability_graph_path = Path(f"../results/synthetic/{dataset}_{noise}_reachability_graph.tgf")
         # Read event log, computed states, and reachability graph
         ongoing_cases = read_csv_log(ongoing_cases_path, log_ids, sort=True)
         computed_states = pd.read_csv(computed_states_path, quotechar="\"")
         with open(reachability_graph_path, "r") as reachability_graph_file:
             reachability_graph = ReachabilityGraph.from_tgf_format(reachability_graph_file.read())
         # Go over each case ID
-        iasr, ias, occ, mark3, mark5, mark7, mark10 = [], [], [], [], [], [], []
+        ias, mark3, mark5, mark10 = [], [], [], []
         for case_id, data in computed_states.groupby("case_id"):
             # Compute real state(s)
             real_states = reachability_graph.get_markings_from_activity_sequence(
@@ -39,22 +39,16 @@ def compute_state_accuracy(datasets: List[str], noise: Optional[str] = None):
             assert len(real_states) == 1, "Multi-state marking found!!!"  # Shouldn't be any in our test logs
             real_state = real_states[0]
             # Process each technique estimation
-            iasr += [evaluate_state_approximation(data, "IASR", real_state)]
             ias += [evaluate_state_approximation(data, "IAS", real_state)]
-            occ += [evaluate_state_approximation(data, "OCC", real_state)]
-            mark3 += [evaluate_state_approximation(data, "marking-3", real_state)]
-            mark5 += [evaluate_state_approximation(data, "marking-5", real_state)]
-            mark7 += [evaluate_state_approximation(data, "marking-7", real_state)]
-            mark10 += [evaluate_state_approximation(data, "marking-10", real_state)]
+            mark3 += [evaluate_state_approximation(data, "3-gram-index", real_state)]
+            mark5 += [evaluate_state_approximation(data, "5-gram-index", real_state)]
+            mark10 += [evaluate_state_approximation(data, "10-gram-index", real_state)]
         # Print stats
         full_dataset_name = dataset if noise is None else f"{dataset}_{noise}"
-        _output_summarized_results(full_dataset_name, "IASR", iasr)
         _output_summarized_results(full_dataset_name, "IAS", ias)
-        _output_summarized_results(full_dataset_name, "OCC", occ)
-        _output_summarized_results(full_dataset_name, "mark-3", mark3)
-        _output_summarized_results(full_dataset_name, "mark-5", mark5)
-        _output_summarized_results(full_dataset_name, "mark-7", mark7)
-        _output_summarized_results(full_dataset_name, "mark-10", mark10)
+        _output_summarized_results(full_dataset_name, "3-gram-index", mark3)
+        _output_summarized_results(full_dataset_name, "5-gram-index", mark5)
+        _output_summarized_results(full_dataset_name, "10-gram-index", mark10)
 
 
 def _output_summarized_results(dataset: str, technique: str, results: List[float]):
