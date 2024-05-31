@@ -78,6 +78,35 @@ def discover_with_inductive_miner(datasets: List[str]):
             write_pnml(petri_net_model, initial_marking, final_marking, output_petri_path)
 
 
+def measure_fitness_models(datasets: List[str]):
+    """
+    Discover the process model with Inductive Miner.
+    """
+    # For each dataset
+    for dataset in datasets:
+        print(f"\n\n----- Processing dataset: {dataset} -----\n")
+        # Instantiate paths
+        event_log_path = f"../inputs/real-life/{dataset}.xes.gz"
+        # Read event log
+        event_log = read_xes(event_log_path)
+        for threshold in [10, 20, 50]:
+            print(f"\n--- Assessing fitness for Inductive Miner ({threshold}) ---")
+            # Create path
+            petri_path = f"../inputs/real-life/{dataset}_IMf{threshold}.pnml"
+            # Discover with Inductive Miner
+            print("Reading Petri net...")
+            petri_net_model, initial_marking, final_marking = pm4py.read_pnml(petri_path)
+            and_splits = [
+                len(transition.out_arcs)
+                for transition in petri_net_model.transitions
+                if len(transition.out_arcs) > 1
+            ]
+            print("Assessing fitness...")
+            fitness = pm4py.fitness_alignments(event_log, petri_net_model, initial_marking, final_marking)
+            print(f"Fitness: {fitness}")
+            print(f"ANDs: {len(and_splits)} ({np.mean(and_splits)})")
+
+
 def add_bpmn_diagram_to_model(bpmn_model_path: Path):
     """
     Add BPMN diagram to the control flow of the existing BPMN model using the hierarchical layout algorithm.
