@@ -8,6 +8,9 @@ executed activities in the index.
 For example, for an ongoing case `A-B-F-T-W-S-G-T-D`, after building the 5-gram index, the state would be computed
 by searching in the index with the sequence `[W, S, G, T, D]`.
 
+This approach has been submitted as a publication to ICPM 2024 under the title "Efficient State Computation for Log
+Animation and Short-Term Simulation Using N-Gram Indexing", by David Chapela-Campa and Marlon Dumas.
+
 ## Requirements
 
 - Python v3.9.5+
