@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 from pix_framework.io.event_log import DEFAULT_CSV_IDS, read_csv_log
 
-from icpm24_split_logs import export_as_csv, export_as_xes
+from vldb25_split_logs import export_as_csv, export_as_xes
 
 log_ids = DEFAULT_CSV_IDS
 
