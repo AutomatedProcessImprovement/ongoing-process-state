@@ -9,12 +9,12 @@ from pm4py.objects import petri
 from pm4py.objects.log.importer.xes import factory as xes_import_factory
 from scipy.stats import t
 
-from icpm24_prefix_alignment import calculate_prefix_alignment_modified_a_star_with_heuristic, \
-    calculate_prefix_alignment_modified_a_star_with_heuristic_without_recalculation, calculate_prefix_alignment_occ
 from process_running_state.bpmn_model import BPMNModel
 from process_running_state.n_gram_index import NGramIndex
 from process_running_state.reachability_graph import ReachabilityGraph
 from process_running_state.utils import read_bpmn_model
+from vldb25_prefix_alignment import calculate_prefix_alignment_modified_a_star_with_heuristic, \
+    calculate_prefix_alignment_modified_a_star_with_heuristic_without_recalculation, calculate_prefix_alignment_occ
 
 number_of_runs = 3
 log_ids = DEFAULT_CSV_IDS
@@ -71,23 +71,34 @@ def compute_current_states(
     for dataset in datasets:
         print(f"\n\n----- Processing dataset: {dataset} -----\n")
         # Instantiate paths
-        #  - For synthetic logs, adapt "input" paths for each of the noise levels (e.g., '/inputs/synthetic/original/')
-        if noise_lvl == "":
+        if "synthetic" in dataset:
+            # Synthetic dataset
+            bpmn_model_path = Path(f"../inputs/synthetic/{dataset}.bpmn")
+            pnml_model_path = Path(f"../inputs/synthetic/{dataset}.pnml")
+            if noise_lvl == "":
+                # No noise
+                ongoing_cases_csv = Path(f"../inputs/synthetic/split/{dataset}_ongoing.csv.gz")
+                ongoing_cases_xes = f"../inputs/synthetic/split/{dataset}_ongoing.xes.gz"
+                output_filename = Path(f"../outputs/{dataset}_ongoing_states.csv")
+                reachability_graph_path = Path(f"../outputs/{dataset}_reachability_graph.tgf")
+            else:
+                # With noise
+                ongoing_cases_csv = Path(f"../inputs/synthetic/{noise_lvl}/{dataset}_ongoing_{noise_lvl}.csv.gz")
+                ongoing_cases_xes = f"../inputs/synthetic/{noise_lvl}/{dataset}_ongoing_{noise_lvl}.xes.gz"
+                output_filename = Path(f"../outputs/{dataset}_{noise_lvl}_ongoing_states.csv")
+                reachability_graph_path = Path(f"../outputs/{dataset}_{noise_lvl}_reachability_graph.tgf")
+        else:
+            # Real-life log
+            bpmn_model_path = Path(f"../inputs/real-life/{dataset}{discovery_extension}.bpmn")
+            pnml_model_path = Path(f"../inputs/real-life/{dataset}{discovery_extension}.pnml")
             ongoing_cases_csv = Path(f"../inputs/real-life/split/{dataset}_ongoing.csv.gz")
             ongoing_cases_xes = f"../inputs/real-life/split/{dataset}_ongoing.xes.gz"
             output_filename = Path(f"../outputs/{dataset}{discovery_extension}_ongoing_states.csv")
             reachability_graph_path = Path(f"../outputs/{dataset}{discovery_extension}_reachability_graph.tgf")
-        else:
-            ongoing_cases_csv = Path(f"../inputs/synthetic/{noise_lvl}/{dataset}_ongoing_{noise_lvl}.csv.gz")
-            ongoing_cases_xes = f"../inputs/synthetic/{noise_lvl}/{dataset}_ongoing_{noise_lvl}.xes.gz"
-            output_filename = Path(f"../outputs/{dataset}_{noise_lvl}_ongoing_states.csv")
-            reachability_graph_path = Path(f"../outputs/{dataset}_{noise_lvl}_reachability_graph.tgf")
-        bpmn_model_path = Path(f"../inputs/real-life/{dataset}{discovery_extension}.bpmn")
-        pnml_model_path = Path(f"../inputs/real-life/{dataset}{discovery_extension}.pnml")
         # Read preprocessed event log(s)
         event_log_xes = xes_import_factory.apply(ongoing_cases_xes)
         event_log_csv = read_csv_log(ongoing_cases_csv, log_ids, sort=True)
-        log_size = len(event_log_xes)
+        log_size = len(event_log_csv[log_ids.case].unique())
         # Read proces model(s)
         bpmn_model = read_bpmn_model(bpmn_model_path)
         pnml_model, initial_marking, final_marking = petri.importer.pnml.import_net(pnml_model_path)
