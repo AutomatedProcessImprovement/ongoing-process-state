@@ -60,8 +60,9 @@ def compute_current_states(
         print("--- Reading Reachability Graph ---\n")
         with open(output_filename, 'a') as output_file:
             output_file.write("technique,case_id,state,runtime_avg,runtime_cnf\n")
-        with open(reachability_graph_path, 'r') as reachability_graph_file:
-            reachability_graph = ReachabilityGraph.from_tgf_format(reachability_graph_file.read())
+        if is_synthetic_process:
+            with open(reachability_graph_path, 'r') as reachability_graph_file:
+                reachability_graph = ReachabilityGraph.from_tgf_format(reachability_graph_file.read())
 
         # Compute token-replay
         print("\n--- Computing with Token-Replay ---\n")
