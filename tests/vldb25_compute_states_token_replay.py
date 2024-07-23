@@ -70,7 +70,7 @@ def compute_current_states(
         with open(output_filename, 'a') as output_file:
             i = 0
             for trace_id, events in event_log_csv.groupby(log_ids.case):
-                # Get n-gram
+                # Get sequence of activities
                 prefix_activities = list(events[log_ids.activity])
                 # Estimate with token-replay
                 marking, runtime_avg, runtime_cnf = get_state_token_replay(prefix_activities, pnml_model,
@@ -130,6 +130,28 @@ def compute_mean_conf_interval(data: list, confidence: float = 0.95) -> Tuple[fl
     return sample_mean, conf_interval
 
 
+def run_ambiguous_model_test():
+    """Run test for ambiguous model in Figure 1 of the paper"""
+    # Instantiate paths
+    pnml_model_path = f"../inputs/synthetic/synthetic_ambiguous.pnml"
+    # Read Petri net
+    pnml_model, initial_marking, final_marking = pm4py.read_pnml(pnml_model_path)
+
+    # Compute token-replay
+    print("\n--- Computing with Token-Replay ---\n")
+    traces = [
+        (["Register invoice", "Notify", "Post invoice", "Pay invoice"], {"sink"}),  # Good
+        (["Register invoice", "Notify", "Notify", "Post invoice", "Pay invoice"], {"sink"}),  # Good
+        (["Register invoice", "Notify", "Post invoice", "Notify", "Post invoice", "Pay invoice"], {"sink"}),  # Bad
+    ]
+    for prefix_activities, gt_marking in traces:
+        # Estimate with token-replay
+        marking, runtime_avg, runtime_cnf = get_state_token_replay(prefix_activities, pnml_model,
+                                                                   initial_marking, final_marking)
+        state = {str(place.properties['place_name_tag']) for place in marking}
+        print(f"\nCase prefix: {prefix_activities}\n\tGround Truth Marking: {gt_marking}\n\tComputed Marking: {state}")
+
+
 if __name__ == '__main__':
     # compute_current_states([
     #     "BPIC_2012",
@@ -173,6 +195,7 @@ if __name__ == '__main__':
     #     "BPIC_2020_TravelPermitData",
     #     "Sepsis_Cases",
     # ], discovery_extension="_IMf10")
+    # run_ambiguous_model_test()
     compute_current_states([
         "synthetic_and_k3",
         "synthetic_and_k5",
