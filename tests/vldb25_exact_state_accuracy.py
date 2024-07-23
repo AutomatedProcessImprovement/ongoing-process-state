@@ -30,7 +30,7 @@ def compute_state_accuracy(datasets: List[str], noise: Optional[str] = None):
         with open(reachability_graph_path, "r") as reachability_graph_file:
             reachability_graph = ReachabilityGraph.from_tgf_format(reachability_graph_file.read())
         # Go over each case ID
-        ias, mark3, mark5, mark10 = [], [], [], []
+        ias, tbr, mark3, mark5, mark10 = [], [], [], [], []
         for case_id, data in computed_states.groupby("case_id"):
             # Compute real state(s)
             real_states = reachability_graph.get_markings_from_activity_sequence(
@@ -40,12 +40,14 @@ def compute_state_accuracy(datasets: List[str], noise: Optional[str] = None):
             real_state = real_states[0]
             # Process each technique estimation
             ias += [evaluate_state_approximation(data, "IAS", real_state)]
+            tbr += [evaluate_state_approximation(data, "token-replay", real_state)]
             mark3 += [evaluate_state_approximation(data, "3-gram-index", real_state)]
             mark5 += [evaluate_state_approximation(data, "5-gram-index", real_state)]
             mark10 += [evaluate_state_approximation(data, "10-gram-index", real_state)]
         # Print stats
         full_dataset_name = dataset if noise is None else f"{dataset}_{noise}"
         _output_summarized_results(full_dataset_name, "IAS", ias)
+        _output_summarized_results(full_dataset_name, "token-replay", tbr)
         _output_summarized_results(full_dataset_name, "3-gram-index", mark3)
         _output_summarized_results(full_dataset_name, "5-gram-index", mark5)
         _output_summarized_results(full_dataset_name, "10-gram-index", mark10)
