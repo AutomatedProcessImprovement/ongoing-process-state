@@ -4,6 +4,7 @@ import subprocess
 from pathlib import Path
 from typing import List, Tuple
 
+import numpy as np
 import pm4py
 from pm4py.convert import convert_to_petri_net
 from pm4py.discovery import discover_bpmn_inductive
