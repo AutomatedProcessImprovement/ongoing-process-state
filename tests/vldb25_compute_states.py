@@ -336,6 +336,7 @@ if __name__ == '__main__':
     #     "synthetic_and_kinf",
     #     "synthetic_xor_sequence",
     #     "synthetic_xor_loop",
+    #     "synthetic_nondeterministic",
     # ])
     # compute_current_states([
     #     "synthetic_and_k3",
