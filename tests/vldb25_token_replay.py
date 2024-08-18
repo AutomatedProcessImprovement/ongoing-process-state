@@ -55,6 +55,12 @@ places_to_flows = {
     "synthetic_xor_loop": {
         ("XOR-join-1",): {"Flow_0a9co7f"}
     },
+    "synthetic_nondeterministic": {
+        ("ent_Gateway_095eicu",): {"Flow_0rd259e", "Flow_086lz63"},
+        ("ent_Activity_1jm3g3j", "exi_Gateway_0d2ir9o"): {"Flow_0rd259e", "Flow_1rrleyc"},
+        ("Flow_05epthj", "exi_Gateway_0d2ir9o"): {"Flow_05epthj", "Flow_1rrleyc"},
+        ("exi_Gateway_1pz2kts",): {"Flow_14c7rtb"},
+    },
 }
 
 

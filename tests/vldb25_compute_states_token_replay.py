@@ -18,70 +18,56 @@ log_ids = DEFAULT_CSV_IDS
 def compute_current_states(
         datasets: List[str],
         noise_lvl: str = "",
-        discovery_extension: str = ""
 ):
     """
     - Run the "token-replay" technique to compute the state of each ongoing process case.
     - Save the results in an intermediate CSV file storing the case ID, technique, ongoing state, avg runtime
     - In this way, the states can be reused later to evaluate any of the RQs.
-    - WARNING! For real-life logs, store the IDs of the places with a token
     """
     # For each dataset
     for dataset in datasets:
         print(f"\n\n----- Processing dataset: {dataset} -----\n")
-        is_synthetic_process = "synthetic" in dataset
         # Instantiate paths
-        if is_synthetic_process:
-            # Synthetic dataset
-            pnml_model_path = f"../inputs/synthetic/{dataset}.pnml"
-            if noise_lvl == "":
-                # No noise
-                ongoing_cases_csv = Path(f"../inputs/synthetic/split/{dataset}_ongoing.csv.gz")
-                output_filename = Path(f"../outputs/{dataset}_ongoing_states.csv")
-                reachability_graph_path = Path(f"../outputs/{dataset}_reachability_graph.tgf")
-            else:
-                # With noise
-                ongoing_cases_csv = Path(f"../inputs/synthetic/{noise_lvl}/{dataset}_ongoing_{noise_lvl}.csv.gz")
-                output_filename = Path(f"../outputs/{dataset}_{noise_lvl}_ongoing_states.csv")
-                reachability_graph_path = Path(f"../outputs/{dataset}_{noise_lvl}_reachability_graph.tgf")
+        pnml_model_path = f"../inputs/synthetic/{dataset}.pnml"
+        if noise_lvl == "":
+            # No noise
+            ongoing_cases_csv = Path(f"../inputs/synthetic/split/{dataset}_ongoing.csv.gz")
+            output_filename = Path(f"../outputs/{dataset}_ongoing_states.csv")
+            reachability_graph_path = Path(f"../outputs/{dataset}_reachability_graph.tgf")
         else:
-            # Real-life log
-            pnml_model_path = f"../inputs/real-life/{dataset}{discovery_extension}.pnml"
-            ongoing_cases_csv = Path(f"../inputs/real-life/split/{dataset}_ongoing.csv.gz")
-            output_filename = Path(f"../outputs/{dataset}{discovery_extension}_ongoing_states.csv")
-            reachability_graph_path = Path(f"../outputs/{dataset}{discovery_extension}_reachability_graph.tgf")
+            # With noise
+            ongoing_cases_csv = Path(f"../inputs/synthetic/{noise_lvl}/{dataset}_ongoing_{noise_lvl}.csv.gz")
+            output_filename = Path(f"../outputs/{dataset}_{noise_lvl}_ongoing_states.csv")
+            reachability_graph_path = Path(f"../outputs/{dataset}_{noise_lvl}_reachability_graph.tgf")
         # Read preprocessed event log(s)
         event_log_csv = read_csv_log(ongoing_cases_csv, log_ids, sort=True)
         log_size = len(event_log_csv[log_ids.case].unique())
         # Read Petri net
         pnml_model, initial_marking, final_marking = pm4py.read_pnml(pnml_model_path)
 
-        # Compute and export reachability graph
+        # Read reachability graph
         print("--- Reading Reachability Graph ---\n")
-        with open(output_filename, 'a') as output_file:
-            output_file.write("technique,case_id,state,runtime_avg,runtime_cnf\n")
-        if is_synthetic_process:
-            with open(reachability_graph_path, 'r') as reachability_graph_file:
-                reachability_graph = ReachabilityGraph.from_tgf_format(reachability_graph_file.read())
+        with open(reachability_graph_path, 'r') as reachability_graph_file:
+            reachability_graph = ReachabilityGraph.from_tgf_format(reachability_graph_file.read())
 
         # Compute token-replay
         print("\n--- Computing with Token-Replay ---\n")
         total_runtime = 0
         with open(output_filename, 'a') as output_file:
+            # output_file.write("technique,case_id,state,runtime_avg,runtime_cnf\n")  # Appending to old result files
             i = 0
             for trace_id, events in event_log_csv.groupby(log_ids.case):
                 # Get sequence of activities
                 prefix_activities = list(events[log_ids.activity])
                 # Estimate with token-replay
-                marking, runtime_avg, runtime_cnf = get_state_token_replay(prefix_activities, pnml_model,
-                                                                           initial_marking, final_marking)
+                marking, runtime_avg, runtime_cnf = get_marking_token_replay(prefix_activities, pnml_model,
+                                                                             initial_marking, final_marking)
                 total_runtime += runtime_avg
                 # Translate for exporting
-                if is_synthetic_process:
-                    state = translate_marking_to_state(marking, pnml_model, reachability_graph, dataset)
-                else:
-                    state = {str(place.properties['place_name_tag']) for place in marking}
-                    # Output to file
+                state = translate_marking_to_state(marking, pnml_model, reachability_graph, dataset)
+                if state is None:
+                    state = set()
+                # Output to file
                 output_file.write(f"\"token-replay\",\"{trace_id}\",\"{state}\",{runtime_avg},{runtime_cnf}\n")
                 # Keep progress counter
                 i += 1
@@ -91,7 +77,7 @@ def compute_current_states(
             output_file.write(f"\"total-runtime-token-replay\",,,{total_runtime},\n")
 
 
-def get_state_token_replay(
+def get_marking_token_replay(
         prefix_activities,
         pnml_model,
         initial_marking,
@@ -128,28 +114,6 @@ def compute_mean_conf_interval(data: list, confidence: float = 0.95) -> Tuple[fl
     conf_interval = t_value * std_error
     # Compute the confidence interval
     return sample_mean, conf_interval
-
-
-def run_ambiguous_model_test():
-    """Run test for ambiguous model in Figure 1 of the paper"""
-    # Instantiate paths
-    pnml_model_path = f"../inputs/synthetic/synthetic_ambiguous.pnml"
-    # Read Petri net
-    pnml_model, initial_marking, final_marking = pm4py.read_pnml(pnml_model_path)
-
-    # Compute token-replay
-    print("\n--- Computing with Token-Replay ---\n")
-    traces = [
-        (["Register invoice", "Notify", "Post invoice", "Pay invoice"], {"sink"}),  # Good
-        (["Register invoice", "Notify", "Notify", "Post invoice", "Pay invoice"], {"sink"}),  # Good
-        (["Register invoice", "Notify", "Post invoice", "Notify", "Post invoice", "Pay invoice"], {"sink"}),  # Bad
-    ]
-    for prefix_activities, gt_marking in traces:
-        # Estimate with token-replay
-        marking, runtime_avg, runtime_cnf = get_state_token_replay(prefix_activities, pnml_model,
-                                                                   initial_marking, final_marking)
-        state = {str(place.properties['place_name_tag']) for place in marking}
-        print(f"\nCase prefix: {prefix_activities}\n\tGround Truth Marking: {gt_marking}\n\tComputed Marking: {state}")
 
 
 if __name__ == '__main__':
@@ -203,6 +167,7 @@ if __name__ == '__main__':
         "synthetic_and_kinf",
         "synthetic_xor_sequence",
         "synthetic_xor_loop",
+        "synthetic_nondeterministic",
     ])
     compute_current_states([
         "synthetic_and_k3",
