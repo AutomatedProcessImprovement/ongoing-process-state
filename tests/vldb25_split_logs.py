@@ -3,9 +3,8 @@ from random import randrange
 from typing import List
 
 import pandas as pd
+import pm4py
 from pix_framework.io.event_log import DEFAULT_CSV_IDS, read_csv_log, DEFAULT_XES_IDS
-from pm4py.objects.log.exporter.xes.factory import export_log
-from pm4py.objects.log.importer.csv.versions.pandas_df_imp import convert_dataframe_to_event_log
 
 log_ids = DEFAULT_CSV_IDS
 
@@ -72,8 +71,8 @@ def export_as_xes(event_log: pd.DataFrame, file_path: str):
         log_ids.end_time: DEFAULT_XES_IDS.end_time,
         log_ids.resource: DEFAULT_XES_IDS.resource,
     }, inplace=True)
-    event_log = convert_dataframe_to_event_log(event_log)
-    export_log(event_log, file_path, parameters={"compress": True})
+    event_log = pm4py.convert_to_event_log(event_log)
+    pm4py.write_xes(event_log, file_path, parameters={"compress": True})
 
 
 if __name__ == '__main__':
