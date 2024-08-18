@@ -36,14 +36,39 @@ def compute_state_accuracy(datasets: List[str], noise: Optional[str] = None):
             real_states = reachability_graph.get_markings_from_activity_sequence(
                 ongoing_cases[ongoing_cases[log_ids.case] == case_id][log_ids.activity]
             )
-            assert len(real_states) == 1, "Multi-state marking found!!!"  # Shouldn't be any in our test logs
-            real_state = real_states[0]
-            # Process each technique estimation
-            ias += [evaluate_state_approximation(data, "IAS", real_state)]
-            tbr += [evaluate_state_approximation(data, "token-replay", real_state)]
-            mark3 += [evaluate_state_approximation(data, "3-gram-index", real_state)]
-            mark5 += [evaluate_state_approximation(data, "5-gram-index", real_state)]
-            mark10 += [evaluate_state_approximation(data, "10-gram-index", real_state)]
+            if len(real_states) == 1:
+                # Evaluate deterministic models (or deterministic case of nondeterministic model)
+                real_state = real_states[0]
+                # Process each technique estimation
+                ias += [evaluate_state_approximation(data, "IAS", real_state)]
+                tbr += [evaluate_state_approximation(data, "token-replay", real_state)]
+                mark3 += [evaluate_state_approximation(data, "3-gram-index", real_state)]
+                mark5 += [evaluate_state_approximation(data, "5-gram-index", real_state)]
+                mark10 += [evaluate_state_approximation(data, "10-gram-index", real_state)]
+            else:
+                # More than one state, only allowed in non-deterministic model
+                assert "nondeterministic" in dataset, "Multi-state marking found in deterministic model!!!"
+                # Process each technique estimation
+                ias += [max([
+                    evaluate_state_approximation(data, "IAS", real_state)
+                    for real_state in real_states
+                ])]
+                tbr += [max([
+                    evaluate_state_approximation(data, "token-replay", real_state)
+                    for real_state in real_states
+                ])]
+                mark3 += [max([
+                    evaluate_state_approximation(data, "3-gram-index", real_state)
+                    for real_state in real_states
+                ])]
+                mark5 += [max([
+                    evaluate_state_approximation(data, "5-gram-index", real_state)
+                    for real_state in real_states
+                ])]
+                mark10 += [max([
+                    evaluate_state_approximation(data, "10-gram-index", real_state)
+                    for real_state in real_states
+                ])]
         # Print stats
         full_dataset_name = dataset if noise is None else f"{dataset}_{noise}"
         _output_summarized_results(full_dataset_name, "IAS", ias)
@@ -87,7 +112,8 @@ if __name__ == '__main__':
     # Process results without noise
     compute_state_accuracy(
         ["synthetic_and_k3", "synthetic_and_k5", "synthetic_and_k10",
-         "synthetic_and_kinf", "synthetic_xor_sequence", "synthetic_xor_loop"]
+         "synthetic_and_kinf", "synthetic_xor_sequence", "synthetic_xor_loop",
+         "synthetic_nondeterministic"]
     )
     # Process results with noise lvl 1
     compute_state_accuracy(
