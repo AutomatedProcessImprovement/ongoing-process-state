@@ -118,18 +118,21 @@ if __name__ == '__main__':
     # Process results with noise lvl 1
     compute_state_accuracy(
         ["synthetic_and_k3", "synthetic_and_k5", "synthetic_and_k10",
-         "synthetic_and_kinf", "synthetic_xor_sequence", "synthetic_xor_loop"],
+         "synthetic_and_kinf", "synthetic_xor_sequence", "synthetic_xor_loop",
+         "synthetic_nondeterministic"],
         "noise_1"
     )
     # Process results with noise lvl 2
     compute_state_accuracy(
         ["synthetic_and_k3", "synthetic_and_k5", "synthetic_and_k10",
-         "synthetic_and_kinf", "synthetic_xor_sequence", "synthetic_xor_loop"],
+         "synthetic_and_kinf", "synthetic_xor_sequence", "synthetic_xor_loop",
+         "synthetic_nondeterministic"],
         "noise_2"
     )
     # Process results with noise lvl 3
     compute_state_accuracy(
         ["synthetic_and_k3", "synthetic_and_k5", "synthetic_and_k10",
-         "synthetic_and_kinf", "synthetic_xor_sequence", "synthetic_xor_loop"],
+         "synthetic_and_kinf", "synthetic_xor_sequence", "synthetic_xor_loop",
+         "synthetic_nondeterministic"],
         "noise_3"
     )

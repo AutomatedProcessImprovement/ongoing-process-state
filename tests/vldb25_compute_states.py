@@ -329,36 +329,39 @@ if __name__ == '__main__':
         "BPIC_2020_TravelPermitData",
         "Sepsis_Cases",
     ], discovery_extension="_IMf10")
-    # compute_current_states([
-    #     "synthetic_and_k3",
-    #     "synthetic_and_k5",
-    #     "synthetic_and_k10",
-    #     "synthetic_and_kinf",
-    #     "synthetic_xor_sequence",
-    #     "synthetic_xor_loop",
-    #     "synthetic_nondeterministic",
-    # ])
-    # compute_current_states([
-    #     "synthetic_and_k3",
-    #     "synthetic_and_k5",
-    #     "synthetic_and_k10",
-    #     "synthetic_and_kinf",
-    #     "synthetic_xor_sequence",
-    #     "synthetic_xor_loop",
-    # ], noise_lvl="noise_1")
-    # compute_current_states([
-    #     "synthetic_and_k3",
-    #     "synthetic_and_k5",
-    #     "synthetic_and_k10",
-    #     "synthetic_and_kinf",
-    #     "synthetic_xor_sequence",
-    #     "synthetic_xor_loop",
-    # ], noise_lvl="noise_2")
-    # compute_current_states([
-    #     "synthetic_and_k3",
-    #     "synthetic_and_k5",
-    #     "synthetic_and_k10",
-    #     "synthetic_and_kinf",
-    #     "synthetic_xor_sequence",
-    #     "synthetic_xor_loop",
-    # ], noise_lvl="noise_3")
+    compute_current_states([
+        "synthetic_and_k3",
+        "synthetic_and_k5",
+        "synthetic_and_k10",
+        "synthetic_and_kinf",
+        "synthetic_xor_sequence",
+        "synthetic_xor_loop",
+        "synthetic_nondeterministic",
+    ])
+    compute_current_states([
+        "synthetic_and_k3",
+        "synthetic_and_k5",
+        "synthetic_and_k10",
+        "synthetic_and_kinf",
+        "synthetic_xor_sequence",
+        "synthetic_xor_loop",
+        "synthetic_nondeterministic",
+    ], noise_lvl="noise_1")
+    compute_current_states([
+        "synthetic_and_k3",
+        "synthetic_and_k5",
+        "synthetic_and_k10",
+        "synthetic_and_kinf",
+        "synthetic_xor_sequence",
+        "synthetic_xor_loop",
+        "synthetic_nondeterministic",
+    ], noise_lvl="noise_2")
+    compute_current_states([
+        "synthetic_and_k3",
+        "synthetic_and_k5",
+        "synthetic_and_k10",
+        "synthetic_and_kinf",
+        "synthetic_xor_sequence",
+        "synthetic_xor_loop",
+        "synthetic_nondeterministic",
+    ], noise_lvl="noise_3")

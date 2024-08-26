@@ -130,4 +130,5 @@ if __name__ == '__main__':
         "synthetic_and_kinf_ongoing",
         "synthetic_xor_loop_ongoing",
         "synthetic_xor_sequence_ongoing",
+        "synthetic_nondeterministic_ongoing",
     ])

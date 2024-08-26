@@ -117,49 +117,6 @@ def compute_mean_conf_interval(data: list, confidence: float = 0.95) -> Tuple[fl
 
 
 if __name__ == '__main__':
-    # compute_current_states([
-    #     "BPIC_2012",
-    #     "BPIC_2013_incidents",
-    #     "BPIC_2014_Activity_log_for_incidents",
-    #     "BPIC_2017",
-    #     "BPIC_2018",
-    #     "BPIC_2019",
-    #     "BPIC_2020_DomesticDeclarations",
-    #     "BPIC_2020_InternationalDeclarations",
-    #     "BPIC_2020_PrepaidTravelCost",
-    #     "BPIC_2020_RequestForPayment",
-    #     "BPIC_2020_TravelPermitData",
-    #     "Sepsis_Cases",
-    # ], discovery_extension="_IMf50")
-    # compute_current_states([
-    #     "BPIC_2012",
-    #     "BPIC_2013_incidents",
-    #     "BPIC_2014_Activity_log_for_incidents",
-    #     "BPIC_2017",
-    #     "BPIC_2018",
-    #     "BPIC_2019",
-    #     "BPIC_2020_DomesticDeclarations",
-    #     "BPIC_2020_InternationalDeclarations",
-    #     "BPIC_2020_PrepaidTravelCost",
-    #     "BPIC_2020_RequestForPayment",
-    #     "BPIC_2020_TravelPermitData",
-    #     "Sepsis_Cases",
-    # ], discovery_extension="_IMf20")
-    # compute_current_states([
-    #     "BPIC_2012",
-    #     "BPIC_2013_incidents",
-    #     "BPIC_2014_Activity_log_for_incidents",
-    #     "BPIC_2017",
-    #     "BPIC_2018",
-    #     "BPIC_2019",
-    #     "BPIC_2020_DomesticDeclarations",
-    #     "BPIC_2020_InternationalDeclarations",
-    #     "BPIC_2020_PrepaidTravelCost",
-    #     "BPIC_2020_RequestForPayment",
-    #     "BPIC_2020_TravelPermitData",
-    #     "Sepsis_Cases",
-    # ], discovery_extension="_IMf10")
-    # run_ambiguous_model_test()
     compute_current_states([
         "synthetic_and_k3",
         "synthetic_and_k5",
@@ -176,6 +133,7 @@ if __name__ == '__main__':
         "synthetic_and_kinf",
         "synthetic_xor_sequence",
         "synthetic_xor_loop",
+        "synthetic_nondeterministic",
     ], noise_lvl="noise_1")
     compute_current_states([
         "synthetic_and_k3",
@@ -184,6 +142,7 @@ if __name__ == '__main__':
         "synthetic_and_kinf",
         "synthetic_xor_sequence",
         "synthetic_xor_loop",
+        "synthetic_nondeterministic",
     ], noise_lvl="noise_2")
     compute_current_states([
         "synthetic_and_k3",
@@ -192,4 +151,5 @@ if __name__ == '__main__':
         "synthetic_and_kinf",
         "synthetic_xor_sequence",
         "synthetic_xor_loop",
+        "synthetic_nondeterministic",
     ], noise_lvl="noise_3")

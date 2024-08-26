@@ -95,3 +95,12 @@ if __name__ == '__main__':
         "BPIC_2020_TravelPermitData",
         "Sepsis_Cases",
     ])
+    # split_logs_into_ongoing_cases([
+    #     "synthetic_and_k3",
+    #     "synthetic_and_k5",
+    #     "synthetic_and_k10",
+    #     "synthetic_and_kinf",
+    #     "synthetic_xor_loop",
+    #     "synthetic_xor_sequence",
+    #     "synthetic_nondeterministic",
+    # ])
