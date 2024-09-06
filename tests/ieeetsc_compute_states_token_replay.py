@@ -9,7 +9,7 @@ from pm4py import Marking
 from scipy.stats import t
 
 from process_running_state.reachability_graph import ReachabilityGraph
-from vldb25_token_replay import translate_marking_to_state, custom_replay_prefix_tbr
+from ieeetsc_token_replay import translate_marking_to_state, custom_replay_prefix_tbr
 
 number_of_runs = 3
 log_ids = DEFAULT_CSV_IDS

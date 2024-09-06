@@ -8,8 +8,9 @@ executed activities in the index.
 For example, for an ongoing case `A-B-F-T-W-S-G-T-D`, after building the 5-gram index, the state would be computed
 by searching in the index with the sequence `[W, S, G, T, D]`.
 
-This approach has been submitted as a publication to VLDB 2025 under the title "Efficient Online Computation of Business
-Process State From Trace Prefixes via N-Gram Indexing", by David Chapela-Campa and Marlon Dumas.
+This approach has been submitted as a publication to IEEE Transactions on Services Computing under the title "Efficient 
+Online Computation of Business Process State From Trace Prefixes via N-Gram Indexing", by David Chapela-Campa and 
+Marlon Dumas.
 
 ## Requirements
 
@@ -47,7 +48,7 @@ ongoing_state = n_gram_index.get_best_marking_state_for(n_gram)
 
 ## Evaluation Reproducibility
 
-The scripts with a name starting with `vldb25_` under folder `tests/` contain the necessary code to reproduce the
+The scripts with a name starting with `ieeetsc_` under folder `tests/` contain the necessary code to reproduce the
 evaluation presented in the publication.
 Most of them are only necessary to preprocess the original datasets.
 This data is already available in this [Zenodo repository](doi.org/10.5281/zenodo.11409897).
@@ -58,7 +59,7 @@ there.
 
 The evaluation scripts depend on two versions of PM4PY:
 
-1. To run the script `vldb25_compute_states.py` where the prefix-alignment technique is used, the requirement is a
+1. To run the script `ieeetsc_compute_states.py` where the prefix-alignment technique is used, the requirement is a
    package with a PM4PY fork implemented by Daniel Schuster
    ([repo](https://github.com/fit-daniel-schuster/online_process_monitoring_using_incremental_state-space_expansion_an_exact_algorithm/)).
    Download the project from the corresponding repository and specify its path in the `pyproject.toml` file in the
@@ -69,22 +70,22 @@ The evaluation scripts depend on two versions of PM4PY:
 ### Synthetic Evaluation
 
 1. Install the project with the PM4PY version specified in point 1 (see above).
-2. Comment the lines in the `main()` function in `vldb25_compute_states.py` that run the state computation for real-life
-   logs, leaving only the calls to function `compute_current_states()` for the synthetic datasets.
+2. Comment the lines in the `main()` function in `ieeetsc_compute_states.py` that run the state computation for 
+   real-life logs, leaving only the calls to function `compute_current_states()` for the synthetic datasets.
 3. Run the script, obtaining the results with the computed states and runtimes (also the reachability graphs) for each  
    proposal in the folder `outputs`.
 4. Reinstall the project with the PM4PY version specified in point 2 (see above).
-5. Run the script `vldb25_compute_states_token_replay.py`, adding the token-based replay results to the previous result
+5. Run the script `ieeetsc_compute_states_token_replay.py`, adding the token-based replay results to the previous result
    files.
 6. Move these files to the folder `results`.
-7. Run the script `vldb25_exact_state_accuracy.py`, obtaining the accuracy results in the folder `outputs`.
+7. Run the script `ieeetsc_exact_state_accuracy.py`, obtaining the accuracy results in the folder `outputs`.
 
 ### Real-life Evaluation
 
 1. Install the project with the PM4PY version specified in point 1 (see above).
-2. Comment the lines in the `main()` function in `vldb25_compute_states.py` that run the state computation for synthetic
-   logs, leaving only the calls to function `compute_current_states()` for the real-life datasets.
+2. Comment the lines in the `main()` function in `ieeetsc_compute_states.py` that run the state computation for
+   synthetic logs, leaving only the calls to function `compute_current_states()` for the real-life datasets.
 3. Run the script, obtaining the results with the computed states and runtimes for each proposal in the folder
    `outputs`.
 4. Move this files to the folder `results`.
-5. Run the script `vldb25_next_activity_accuracy.py`, obtaining the accuracy results in the folder `outputs`.
+5. Run the script `ieeetsc_next_activity_accuracy.py`, obtaining the accuracy results in the folder `outputs`.

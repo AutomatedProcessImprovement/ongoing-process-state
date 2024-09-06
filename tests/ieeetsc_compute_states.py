@@ -13,7 +13,7 @@ from process_running_state.bpmn_model import BPMNModel
 from process_running_state.n_gram_index import NGramIndex
 from process_running_state.reachability_graph import ReachabilityGraph
 from process_running_state.utils import read_bpmn_model
-from vldb25_prefix_alignment import calculate_prefix_alignment_modified_a_star_with_heuristic, \
+from ieeetsc_prefix_alignment import calculate_prefix_alignment_modified_a_star_with_heuristic, \
     calculate_prefix_alignment_modified_a_star_with_heuristic_without_recalculation, calculate_prefix_alignment_occ
 
 number_of_runs = 3
