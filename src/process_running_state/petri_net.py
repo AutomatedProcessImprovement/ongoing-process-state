@@ -254,36 +254,47 @@ class PetriNet:
                         # Add it to explored
                         explored_markings.add(current_marking_key)
                         # Get enabled invisible transitions
-                        enabled_invisible_transitions = self.get_enabled_invisible_transitions(current_marking)
-                        # If no enabled invisible transitions
-                        if len(enabled_invisible_transitions) == 0:
+                        enabled_invisible_transition_ids = self.get_enabled_invisible_transitions(current_marking)
+                        # If there are no enabled invisible transitions
+                        if len(enabled_invisible_transition_ids) == 0:
                             # Save fully advanced marking
                             set_tuples_final_markings |= {
                                 (enabled_task_id, current_marking_key)
                                 for enabled_task_id in self.get_enabled_tasks(current_marking)
                             }
                         else:
-                            # Otherwise, select the input place(s) of one of the invisible transitions
-                            invisible_transition_id = enabled_invisible_transitions.pop()
-                            invisible_transition = self.id_to_transition[invisible_transition_id]
-                            # If it is a parallel split
-                            if invisible_transition.is_split():
-                                # Traverse it
-                                advanced_marking = self.simulate_execution(invisible_transition_id, current_marking)
-                                # Save advancements that were needed to enable new activities (recursive)
-                                set_tuples_final_markings |= {
-                                    (enabled_task_id, tuple(sorted(fully_advanced_marking)))
-                                    for enabled_task_id, fully_advanced_marking
-                                    in self.advance_full_marking(advanced_marking, explored_markings)
-                                }
-                            else:
-                                # One outgoing edge transition, execute and continue with advancement
-                                next_marking_stack += [
-                                    self.simulate_execution(invisible_transition_id, current_marking)
-                                ]
+                            # Get one invisible transition and its incoming place(s)
+                            selected_transition_id = enabled_invisible_transition_ids.pop()
+                            selected_transition = self.id_to_transition[selected_transition_id]
+                            to_be_consumed_place_ids = selected_transition.incoming
+                            # Create set with this invisible transition + all others sharing any of its incoming places
+                            invisible_transitions_to_fire = {
+                                                                transition_id
+                                                                for transition_id in enabled_invisible_transition_ids
+                                                                if len(
+                                    self.id_to_transition[transition_id].incoming & to_be_consumed_place_ids) > 0
+                                                            } | {selected_transition_id}
+                            # Fire invisible transitions sharing incoming place(s) (i.e., XOR-split)
+                            for invisible_transition_id in invisible_transitions_to_fire:
+                                invisible_transition = self.id_to_transition[invisible_transition_id]
+                                # If it is a parallel split
+                                if invisible_transition.is_split():
+                                    # Fire it
+                                    advanced_marking = self.simulate_execution(invisible_transition_id, current_marking)
+                                    # Save advancements that were needed to enable new activities (recursive)
+                                    set_tuples_final_markings |= {
+                                        (enabled_task_id, tuple(sorted(fully_advanced_marking)))
+                                        for enabled_task_id, fully_advanced_marking
+                                        in self.advance_full_marking(advanced_marking, explored_markings)
+                                    }
+                                else:
+                                    # One outgoing edge transition, execute and continue with advancement
+                                    next_marking_stack += [
+                                        self.simulate_execution(invisible_transition_id, current_marking)
+                                    ]
                 # Update new marking stack
                 current_marking_stack = next_marking_stack
-            # Remove redundant tuples (str, Set[str])
+            # Transform to tuples with sets (str, Set[str])
             tuples_final_markings = [
                 (task_id, set(final_marking))
                 for task_id, final_marking in set_tuples_final_markings
@@ -318,8 +329,6 @@ class PetriNet:
         rollbacked_marking = set()
         # Retrieve place enabling current task
         enabling_places = self.id_to_transition[enabled_task_id].incoming & advanced_marking
-        assert len(enabling_places) == 1, f"Many enabled places ({enabling_places}) for one task ({enabled_task_id})"
-        enabling_place_id = enabling_places.pop()
         # Generate all possible branch combinations to explore individually
         branch_combinations = [
             combination
@@ -333,9 +342,9 @@ class PetriNet:
         for branch_combination in branch_combinations:
             if not found:
                 # Advance with this branch combination
-                for advanced_marking_with_branch_combination in self._advance_combination(branch_combination):
-                    # If the advancement reached the enabling place
-                    reached_enabling_place = enabling_place_id in advanced_marking_with_branch_combination
+                for _, advanced_marking_with_branch_combination in self._advance_marking(branch_combination):
+                    # If the advancement reached the enabling place(s)
+                    reached_enabling_place = enabling_places <= advanced_marking_with_branch_combination
                     # and the advanced marking with these branch combination is all in the advanced marking
                     advanced_is_subset = advanced_marking_with_branch_combination <= advanced_marking
                     if not found and reached_enabling_place and advanced_is_subset:
@@ -346,7 +355,7 @@ class PetriNet:
         other_branches = marking - advanced_combination
         rollbacked = False
         if len(other_branches) > 0:
-            for advanced_marking_other_branches in self._advance_combination(other_branches):
+            for _, advanced_marking_other_branches in self._advance_marking(other_branches):
                 if not rollbacked and advanced_marking_other_branches <= advanced_marking:
                     # This advancement is independent of the current branch, rollback it
                     rollbacked = True
@@ -358,50 +367,6 @@ class PetriNet:
             rollbacked_marking = advanced_marking
         # Return final markings
         return rollbacked_marking
-
-    def _advance_combination(self, combination: Set[str]) -> List[Set[str]]:
-        """
-        Advance a combination of branches as much as possible, executing all enabled invisible transitions, generating
-        all combinations of advanced branches until no more invisible transitions are enabled.
-
-        :param combination: marking to consider as starting point to perform the advance operation.
-        :return: list with the different markings result of such advancement.
-        """
-        # If result in cache, retrieve, otherwise compute
-        combination_key = tuple(sorted(combination))
-        if self._cached_search and combination_key in self._advance_combination_cache:
-            final_markings = self._advance_combination_cache[combination_key]
-        else:
-            # Initialize breath-first search list
-            current_marking_stack = [combination]
-            explored_markings = set()
-            final_markings = []
-            # Run propagation until no more gateways can be fired
-            while current_marking_stack:
-                next_marking_stack = []
-                # For each marking
-                for current_marking in current_marking_stack:
-                    # If it hasn't been explored
-                    current_marking_key = tuple(sorted(current_marking))
-                    if current_marking_key not in explored_markings:
-                        # Add it to explored
-                        explored_markings.add(current_marking_key)
-                        # Get enabled invisible transitions
-                        enabled_invisible_transitions = self.get_enabled_invisible_transitions(current_marking)
-                        # If no enabled invisible transitions, save fully advanced marking
-                        if len(enabled_invisible_transitions) == 0:
-                            final_markings += [current_marking]
-                        else:
-                            # Otherwise, execute one enabled invisible transition and save result for next iteration
-                            gateway_id = enabled_invisible_transitions.pop()
-                            next_marking_stack += [self.simulate_execution(gateway_id, current_marking)]
-                # Update new marking stack
-                current_marking_stack = next_marking_stack
-            # Save if using cache
-            if self._cached_search:
-                self._advance_combination_cache[combination_key] = final_markings
-        # Return final set
-        return final_markings
 
     def get_reachability_graph(self, cached_search: bool = True) -> ReachabilityGraph:
         """

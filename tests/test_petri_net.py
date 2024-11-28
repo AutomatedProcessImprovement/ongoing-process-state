@@ -56,11 +56,11 @@ def test_reachability_graph_nested_XOR():
     assert (reachability_graph.marking_to_key[tuple(sorted({"2", "9"}))],
             reachability_graph.marking_to_key[tuple(sorted({"8", "9"}))]) in edges
     edges = {reachability_graph.edges[edge_id] for edge_id in reachability_graph.activity_to_edges["E"]}
-    assert (reachability_graph.marking_to_key[tuple(sorted({"2", "5"}))],
+    assert (reachability_graph.marking_to_key[tuple(sorted({"2", "3"}))],
             reachability_graph.marking_to_key[tuple(sorted({"2", "9"}))]) in edges
     assert (reachability_graph.marking_to_key[tuple(sorted({"8", "3"}))],
             reachability_graph.marking_to_key[tuple(sorted({"8", "9"}))]) in edges
-    edges = {reachability_graph.edges[edge_id] for edge_id in reachability_graph.activity_to_edges["D"]}
+    edges = {reachability_graph.edges[edge_id] for edge_id in reachability_graph.activity_to_edges["F"]}
     assert (reachability_graph.marking_to_key[tuple(sorted({"8", "9"}))],
             reachability_graph.marking_to_key[tuple(sorted({"11"}))]) in edges
 
