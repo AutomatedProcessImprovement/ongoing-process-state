@@ -104,3 +104,42 @@ def _petri_net_with_AND_and_nested_XOR_simple() -> PetriNet:
     petri_net.initial_marking = {"0"}
     petri_net.final_marking = {"11"}
     return petri_net
+
+
+def _petri_net_with_loop_inside_AND() -> PetriNet:
+    petri_net = PetriNet()
+    petri_net._cached_search = False
+    petri_net.add_place("0", "p0")
+    petri_net.add_place("2", "p2")
+    petri_net.add_place("4", "p4")
+    petri_net.add_place("5", "p5")
+    petri_net.add_place("8", "p8")
+    petri_net.add_place("9", "p9")
+    petri_net.add_place("12", "p12")
+    petri_net.add_place("14", "p14")
+    petri_net.add_transition("1", "A")
+    petri_net.add_transition("6", "B")
+    petri_net.add_transition("7", "C")
+    petri_net.add_transition("13", "D")
+    petri_net.add_transition("3", "silent_3", invisible=True)
+    petri_net.add_transition("10", "silent_10", invisible=True)
+    petri_net.add_transition("11", "silent_11", invisible=True)
+    petri_net.add_edge("0", "1")
+    petri_net.add_edge("1", "2")
+    petri_net.add_edge("2", "3")
+    petri_net.add_edge("3", "4")
+    petri_net.add_edge("3", "5")
+    petri_net.add_edge("4", "6")
+    petri_net.add_edge("5", "7")
+    petri_net.add_edge("6", "8")
+    petri_net.add_edge("7", "9")
+    petri_net.add_edge("8", "10")
+    petri_net.add_edge("10", "4")
+    petri_net.add_edge("8", "11")
+    petri_net.add_edge("9", "11")
+    petri_net.add_edge("11", "12")
+    petri_net.add_edge("12", "13")
+    petri_net.add_edge("13", "14")
+    petri_net.initial_marking = {"0"}
+    petri_net.final_marking = {"14"}
+    return petri_net
