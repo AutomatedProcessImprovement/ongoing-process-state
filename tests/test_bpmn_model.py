@@ -513,6 +513,11 @@ def test_reachability_graph_loop_inside_parallel_and_loop_all_back():
     # Assert general sizes
     assert len(reachability_graph.markings) == 6
     assert len(reachability_graph.edges) == 10
+    # Assert size of edges per activity
+    assert len(reachability_graph.activity_to_edges["A"]) == 1
+    assert len(reachability_graph.activity_to_edges["B"]) == 5
+    assert len(reachability_graph.activity_to_edges["C"]) == 3
+    assert len(reachability_graph.activity_to_edges["D"]) == 1
     # Assert specific edges
     edges = {reachability_graph.edges[edge_id] for edge_id in reachability_graph.activity_to_edges["A"]}
     assert (reachability_graph.marking_to_key[tuple(sorted({"1"}))],
@@ -546,6 +551,10 @@ def test_reachability_graph_infinite_loop():
     # Assert general sizes
     assert len(reachability_graph.markings) == 4
     assert len(reachability_graph.edges) == 5
+    # Assert size of edges per activity
+    assert len(reachability_graph.activity_to_edges["A"]) == 1
+    assert len(reachability_graph.activity_to_edges["B"]) == 2
+    assert len(reachability_graph.activity_to_edges["C"]) == 2
     # Assert specific edges
     edges = {reachability_graph.edges[edge_id] for edge_id in reachability_graph.activity_to_edges["A"]}
     assert (reachability_graph.marking_to_key[tuple(sorted({"1"}))],
@@ -568,6 +577,11 @@ def test_reachability_graph_infinite_loop_and_AND():
     # Assert general sizes
     assert len(reachability_graph.markings) == 6
     assert len(reachability_graph.edges) == 15
+    # Assert size of edges per activity
+    assert len(reachability_graph.activity_to_edges["A"]) == 1
+    assert len(reachability_graph.activity_to_edges["B"]) == 5
+    assert len(reachability_graph.activity_to_edges["C"]) == 5
+    assert len(reachability_graph.activity_to_edges["D"]) == 4
     # Assert specific edges
     edges = {reachability_graph.edges[edge_id] for edge_id in reachability_graph.activity_to_edges["A"]}
     assert (reachability_graph.marking_to_key[tuple(sorted({"1"}))],
@@ -600,6 +614,11 @@ def test_reachability_graph_optional_AND_with_skipping_and_loop_branches():
     # Assert general sizes
     assert len(reachability_graph.markings) == 6
     assert len(reachability_graph.edges) == 10
+    # Assert size of edges per activity
+    assert len(reachability_graph.activity_to_edges["A"]) == 1
+    assert len(reachability_graph.activity_to_edges["B"]) == 2
+    assert len(reachability_graph.activity_to_edges["C"]) == 4
+    assert len(reachability_graph.activity_to_edges["D"]) == 3
     # Assert specific edges
     edges = {reachability_graph.edges[edge_id] for edge_id in reachability_graph.activity_to_edges["A"]}
     assert (reachability_graph.marking_to_key[tuple(sorted({"1"}))],
