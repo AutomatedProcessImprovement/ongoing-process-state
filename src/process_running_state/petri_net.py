@@ -287,18 +287,8 @@ class PetriNet:
                                 for enabled_task_id in self.get_enabled_tasks(current_marking)
                             }
                         else:
-                            # Get one invisible transition and its incoming place(s)
-                            selected_transition_id = enabled_invisible_transition_ids.pop()
-                            selected_transition = self.id_to_transition[selected_transition_id]
-                            to_be_consumed_place_ids = selected_transition.incoming
-                            # Create set with this invisible transition + all others sharing any of its incoming places
-                            invisible_transitions_to_fire = {selected_transition_id} | {
-                                transition_id
-                                for transition_id in enabled_invisible_transition_ids
-                                if len(self.id_to_transition[transition_id].incoming & to_be_consumed_place_ids) > 0
-                            }
-                            # Fire invisible transitions sharing incoming place(s) (i.e., XOR-split)
-                            for invisible_transition_id in invisible_transitions_to_fire:
+                            # Fire enabled invisible transitions
+                            for invisible_transition_id in enabled_invisible_transition_ids:
                                 invisible_transition = self.id_to_transition[invisible_transition_id]
                                 # If it is a parallel split
                                 if invisible_transition.is_split():
