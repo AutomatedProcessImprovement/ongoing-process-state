@@ -175,7 +175,7 @@ class BPMNModel:
                 return [new_marking | {outgoing_flow} for outgoing_flow in node.outgoing_flows]
         elif node.is_AND():
             # Parallel gateway: consume all incoming and enable all outgoing
-            if node.incoming_flows.issubset(marking):
+            if node.incoming_flows <= marking:
                 new_marking = marking - node.incoming_flows | node.outgoing_flows
                 return [new_marking]
         elif node.is_OR():
@@ -203,7 +203,7 @@ class BPMNModel:
             node.id
             for node in self.nodes
             if (not node.is_start_event() and not node.is_end_event()) and (
-                    (node.is_AND() and node.incoming_flows.issubset(marking)) or
+                    (node.is_AND() and node.incoming_flows <= marking) or
                     (not node.is_AND() and len(node.incoming_flows & marking) > 0)
             )
         }
@@ -332,7 +332,7 @@ class BPMNModel:
                         # If no enabled gateways, save fully advanced marking
                         if len(enabled_gateways) == 0:
                             set_tuples_final_markings |= {
-                                (enabled_node_id, tuple(sorted(current_marking)))
+                                (enabled_node_id, current_marking_key)
                                 for enabled_node_id in self.get_enabled_nodes(current_marking)
                             }
                         else:
@@ -355,7 +355,7 @@ class BPMNModel:
                                 next_marking_stack += self.simulate_execution(gateway_id, current_marking)
                 # Update new marking stack
                 current_marking_stack = next_marking_stack
-            # Remove redundant tuples (str, Set[str])
+            # Transform to tuples with sets (str, Set[str])
             tuples_final_markings = [
                 (node_id, set(final_marking))
                 for node_id, final_marking in set_tuples_final_markings
@@ -409,7 +409,7 @@ class BPMNModel:
                     # If the advancement reached the enabling flow
                     reached_enabling_flow = enabling_flow_id in advanced_marking_with_branch_combination
                     # and the advanced marking with these branch combination is all in the advanced marking
-                    advanced_is_subset = advanced_marking_with_branch_combination.issubset(advanced_marking)
+                    advanced_is_subset = advanced_marking_with_branch_combination <= advanced_marking
                     if not found and reached_enabling_flow and advanced_is_subset:
                         # All these branches were needed to advance current one, save to not rollback them
                         found = True
@@ -419,7 +419,7 @@ class BPMNModel:
         rollbacked = False
         if len(other_branches) > 0:
             for advanced_marking_other_branches in self._advance_combination(other_branches):
-                if not rollbacked and advanced_marking_other_branches.issubset(advanced_marking):
+                if not rollbacked and advanced_marking_other_branches <= advanced_marking:
                     # This advancement is independent of the current branch, rollback it
                     rollbacked = True
                     rollbacked_marking = advanced_marking - advanced_marking_other_branches | other_branches
