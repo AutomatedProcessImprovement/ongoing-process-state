@@ -85,6 +85,30 @@ class PetriNet:
         source.outgoing |= {target_id}
         target.incoming |= {source_id}
 
+    def fulfills_preconditions(self) -> bool:
+        """
+        Checks correctness of Petri net according to the restrictions needed to compute the reachability graph. This
+        implies that all the outgoing transitions of a place must be either invisible transitions or tasks, not mixed.
+
+        :return: boolean whether the Petri net is correct for reachability graph analysis or not.
+        """
+        fulfills = True
+        # Check that all places are connected either to all invisible or all tasks
+        for place in self.places:
+            if fulfills:
+                # Update flag variable for this place
+                all_invisible = all([self.id_to_transition[outgoing_id].is_invisible()
+                                     for outgoing_id in place.outgoing
+                                     ])
+                all_task = all([self.id_to_transition[outgoing_id].is_task()
+                                for outgoing_id in place.outgoing
+                                ])
+                if not all_invisible and not all_task:
+                    print(f"Error! Place '{place.id}' is connected to both invisible transitions and tasks.")
+                    fulfills = False
+        # Return result
+        return fulfills
+
     def simulate_execution(self, transition_id: str, marking: Set[str]) -> Set[str]:
         """
         Simulate the execution of [node_id], if possible, given the current [marking], and return the possible markings
@@ -269,11 +293,11 @@ class PetriNet:
                             to_be_consumed_place_ids = selected_transition.incoming
                             # Create set with this invisible transition + all others sharing any of its incoming places
                             invisible_transitions_to_fire = {
-                                                                transition_id
-                                                                for transition_id in enabled_invisible_transition_ids
-                                                                if len(
+                                transition_id
+                                for transition_id in enabled_invisible_transition_ids
+                                if len(
                                     self.id_to_transition[transition_id].incoming & to_be_consumed_place_ids) > 0
-                                                            } | {selected_transition_id}
+                            } | {selected_transition_id}
                             # Fire invisible transitions sharing incoming place(s) (i.e., XOR-split)
                             for invisible_transition_id in invisible_transitions_to_fire:
                                 invisible_transition = self.id_to_transition[invisible_transition_id]
@@ -376,6 +400,10 @@ class PetriNet:
 
         :return: the reachability graph of this BPMN model.
         """
+        # Check correctness of Petri net
+        if not self.fulfills_preconditions():
+            raise RuntimeError("Incorrect model structure! Check logged info.")
+        # Initialize caches
         self._cached_search = cached_search
         self._advance_marking_cache = dict()
         self._advance_combination_cache = dict()
