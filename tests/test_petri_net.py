@@ -39,6 +39,48 @@ def test_reachability_graph_AND_and_XOR():
             reachability_graph.marking_to_key[tuple(sorted({"14"}))]) in edges
 
 
+def test_reachability_graph_XOR_within_AND():
+    petri_net = _petri_net_with_XOR_within_AND()
+    reachability_graph = petri_net.get_reachability_graph(cached_search=False)
+    # Assert general sizes
+    assert len(reachability_graph.markings) == 10
+    assert len(reachability_graph.edges) == 26
+    # Assert size of edges per activity
+    assert len(reachability_graph.activity_to_edges["A"]) == 1
+    assert len(reachability_graph.activity_to_edges["B"]) == 4
+    assert len(reachability_graph.activity_to_edges["C"]) == 4
+    assert len(reachability_graph.activity_to_edges["D"]) == 4
+    assert len(reachability_graph.activity_to_edges["E"]) == 4
+    assert len(reachability_graph.activity_to_edges["F"]) == 4
+    assert len(reachability_graph.activity_to_edges["G"]) == 4
+    assert len(reachability_graph.activity_to_edges["H"]) == 1
+    # Assert specific edges
+    edges = {reachability_graph.edges[edge_id] for edge_id in reachability_graph.activity_to_edges["A"]}
+    assert (reachability_graph.marking_to_key[tuple(sorted({"0"}))],
+            reachability_graph.marking_to_key[tuple(sorted({"4", "5", "6"}))]) in edges
+    edges = {reachability_graph.edges[edge_id] for edge_id in reachability_graph.activity_to_edges["B"]}
+    assert (reachability_graph.marking_to_key[tuple(sorted({"4", "5", "6"}))],
+            reachability_graph.marking_to_key[tuple(sorted({"37", "5", "6"}))]) in edges
+    assert (reachability_graph.marking_to_key[tuple(sorted({"4", "38", "6"}))],
+            reachability_graph.marking_to_key[tuple(sorted({"37", "38", "6"}))]) in edges
+    assert (reachability_graph.marking_to_key[tuple(sorted({"4", "5", "39"}))],
+            reachability_graph.marking_to_key[tuple(sorted({"37", "5", "39"}))]) in edges
+    assert (reachability_graph.marking_to_key[tuple(sorted({"4", "38", "39"}))],
+            reachability_graph.marking_to_key[tuple(sorted({"41"}))]) in edges
+    edges = {reachability_graph.edges[edge_id] for edge_id in reachability_graph.activity_to_edges["F"]}
+    assert (reachability_graph.marking_to_key[tuple(sorted({"4", "5", "6"}))],
+            reachability_graph.marking_to_key[tuple(sorted({"4", "5", "39"}))]) in edges
+    assert (reachability_graph.marking_to_key[tuple(sorted({"4", "38", "6"}))],
+            reachability_graph.marking_to_key[tuple(sorted({"4", "38", "39"}))]) in edges
+    assert (reachability_graph.marking_to_key[tuple(sorted({"37", "5", "6"}))],
+            reachability_graph.marking_to_key[tuple(sorted({"37", "5", "39"}))]) in edges
+    assert (reachability_graph.marking_to_key[tuple(sorted({"37", "38", "6"}))],
+            reachability_graph.marking_to_key[tuple(sorted({"41"}))]) in edges
+    edges = {reachability_graph.edges[edge_id] for edge_id in reachability_graph.activity_to_edges["H"]}
+    assert (reachability_graph.marking_to_key[tuple(sorted({"41"}))],
+            reachability_graph.marking_to_key[tuple(sorted({"43"}))]) in edges
+
+
 def test_reachability_graph_nested_XOR():
     # # # # # # # # # # # # # # # # # # # # #
     # Complex Petri net with many invisible #
