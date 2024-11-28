@@ -278,7 +278,7 @@ def test_advance_full_marking_triple_loop_model():
     assert ("32", {"31", "28"}) in markings
 
 
-def test_reachability_graph_simple():
+def test_reachability_graph_AND_and_XOR():
     bpmn_model = _bpmn_model_with_AND_and_XOR()
     reachability_graph = bpmn_model.get_reachability_graph(cached_search=False)
     # Assert general sizes
@@ -341,7 +341,7 @@ def test_reachability_graph_XOR_within_AND():
             reachability_graph.marking_to_key[tuple(sorted({"38"}))]) in edges
 
 
-def test_reachability_graph_nested_XOR():
+def test_reachability_graph_AND_nested_XOR():
     bpmn_model = _bpmn_model_with_AND_and_nested_XOR()
     reachability_graph = bpmn_model.get_reachability_graph(cached_search=False)
     # Assert general sizes
