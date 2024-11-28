@@ -514,3 +514,52 @@ def _petri_net_with_infinite_loop_and_AND() -> PetriNet:
     petri_net.initial_marking = {"0"}
     petri_net.final_marking = {"27"}
     return petri_net
+
+
+def _petri_net_with_optional_AND_with_skipping_and_loop_branches() -> PetriNet:
+    petri_net = PetriNet()
+    petri_net._cached_search = False
+    petri_net.add_place("0", "p0")
+    petri_net.add_place("2", "p2")
+    petri_net.add_place("4", "p4")
+    petri_net.add_place("5", "p5")
+    petri_net.add_place("8", "p8")
+    petri_net.add_place("9", "p9")
+    petri_net.add_place("12", "p12")
+    petri_net.add_place("16", "p16")
+    petri_net.add_place("18", "p18")
+    petri_net.add_transition("1", "A")
+    petri_net.add_transition("10", "B")
+    petri_net.add_transition("7", "C")
+    petri_net.add_transition("17", "D")
+    petri_net.add_transition("3", "silent_3", invisible=True)
+    petri_net.add_transition("6", "silent_6", invisible=True)
+    petri_net.add_transition("11", "silent_11", invisible=True)
+    petri_net.add_transition("13", "silent_13", invisible=True)
+    petri_net.add_transition("14", "silent_14", invisible=True)
+    petri_net.add_transition("15", "silent_15", invisible=True)
+    petri_net.add_edge("0", "1")
+    petri_net.add_edge("1", "2")
+    petri_net.add_edge("2", "3")
+    petri_net.add_edge("2", "15")
+    petri_net.add_edge("3", "4")
+    petri_net.add_edge("3", "5")
+    petri_net.add_edge("4", "6")
+    petri_net.add_edge("4", "11")
+    petri_net.add_edge("5", "7")
+    petri_net.add_edge("6", "8")
+    petri_net.add_edge("7", "9")
+    petri_net.add_edge("8", "10")
+    petri_net.add_edge("9", "13")
+    petri_net.add_edge("9", "14")
+    petri_net.add_edge("10", "12")
+    petri_net.add_edge("11", "12")
+    petri_net.add_edge("12", "14")
+    petri_net.add_edge("13", "5")
+    petri_net.add_edge("14", "16")
+    petri_net.add_edge("15", "16")
+    petri_net.add_edge("16", "17")
+    petri_net.add_edge("17", "18")
+    petri_net.initial_marking = {"0"}
+    petri_net.final_marking = {"18"}
+    return petri_net
