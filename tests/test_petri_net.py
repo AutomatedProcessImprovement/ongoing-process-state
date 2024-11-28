@@ -474,3 +474,53 @@ def test_reachability_graph_optional_AND_with_skipping_and_loop_branches():
             reachability_graph.marking_to_key[tuple(sorted({"18"}))]) in edges
     assert (reachability_graph.marking_to_key[tuple(sorted({"12", "9"}))],
             reachability_graph.marking_to_key[tuple(sorted({"18"}))]) in edges
+
+
+def test_reachability_graphs_with_cache():
+    petri_net = _petri_net_with_AND_and_XOR()
+    reachability_graph_no_cache = petri_net.get_reachability_graph(cached_search=False)
+    reachability_graph_cache = petri_net.get_reachability_graph(cached_search=True)
+    assert reachability_graph_cache == reachability_graph_no_cache
+
+    petri_net = _petri_net_with_XOR_within_AND()
+    reachability_graph_no_cache = petri_net.get_reachability_graph(cached_search=False)
+    reachability_graph_cache = petri_net.get_reachability_graph(cached_search=True)
+    assert reachability_graph_cache == reachability_graph_no_cache
+
+    petri_net = _petri_net_with_AND_and_nested_XOR()
+    reachability_graph_no_cache = petri_net.get_reachability_graph(cached_search=False)
+    reachability_graph_cache = petri_net.get_reachability_graph(cached_search=True)
+    assert reachability_graph_cache == reachability_graph_no_cache
+
+    petri_net = _petri_net_with_loop_inside_AND()
+    reachability_graph_no_cache = petri_net.get_reachability_graph(cached_search=False)
+    reachability_graph_cache = petri_net.get_reachability_graph(cached_search=True)
+    assert reachability_graph_cache == reachability_graph_no_cache
+
+    petri_net = _petri_net_with_two_loops_inside_AND_followed_by_XOR_within_AND()
+    reachability_graph_no_cache = petri_net.get_reachability_graph(cached_search=False)
+    reachability_graph_cache = petri_net.get_reachability_graph(cached_search=True)
+    assert reachability_graph_cache == reachability_graph_no_cache
+
+    petri_net = _petri_net_with_three_loops_inside_AND_two_of_them_inside_sub_AND()
+    reachability_graph_no_cache = petri_net.get_reachability_graph(cached_search=False)
+    reachability_graph_cache = petri_net.get_reachability_graph(cached_search=True)
+    assert reachability_graph_cache == reachability_graph_no_cache
+
+    petri_net = _petri_net_with_loop_inside_parallel_and_loop_all_back()
+    # Repair and continue with correct format
+    petri_net.add_transition("14_it", "14_incoming_transition", invisible=True)
+    petri_net.add_place("14_ip", "14_incoming_place")
+    petri_net.id_to_place["12"].outgoing = {"13"}
+    petri_net.id_to_transition["14"].incoming = set()
+    petri_net.add_edge("12", "14_it")
+    petri_net.add_edge("14_it", "14_ip")
+    petri_net.add_edge("14_ip", "14")
+    reachability_graph_no_cache = petri_net.get_reachability_graph(cached_search=False)
+    reachability_graph_cache = petri_net.get_reachability_graph(cached_search=True)
+    assert reachability_graph_cache == reachability_graph_no_cache
+
+    petri_net = _petri_net_with_infinite_loop()
+    reachability_graph_no_cache = petri_net.get_reachability_graph(cached_search=False)
+    reachability_graph_cache = petri_net.get_reachability_graph(cached_search=True)
+    assert reachability_graph_cache == reachability_graph_no_cache
