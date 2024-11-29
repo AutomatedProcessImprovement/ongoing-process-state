@@ -159,7 +159,7 @@ def compute_current_states(
                     try:
                         marking, runtime_avg, runtime_cnf = get_state_prefix_alignment(trace, pnml_model,
                                                                                        initial_marking, final_marking,
-                                                                                       prefix_type, reachability_graph)
+                                                                                       prefix_type)
                     except TypeError as e:
                         marking = f"Error! {str(e).replace(',', '.')}"
                         runtime_avg, runtime_cnf = 0, 0
@@ -217,8 +217,7 @@ def get_state_prefix_alignment(
         pnml_model,
         initial_marking,
         final_marking,
-        alignment_type: AlignmentType,
-        reachability_graph: ReachabilityGraph
+        alignment_type: AlignmentType
 ) -> Tuple[Set[str], float, float]:
     """Compute the state of an ongoing case with a prefix-alignment technique."""
     runtimes = []
@@ -238,16 +237,15 @@ def get_state_prefix_alignment(
             result = calculate_prefix_alignment_occ(trace, pnml_model,
                                                     initial_marking,
                                                     final_marking)
-        model_movements = [
-            element['label'][1]
-            for element in result['alignment']
-            if element['name'][1] != '>>' and element['label'][1] is not None
-        ]
-        states = reachability_graph.get_markings_from_activity_sequence(model_movements)
+        computed_state = {
+            movement.name[1]
+            for movement in result['alignment'][-1]['marking_after_transition']
+            if movement.name[0] == ">>"
+        }
         end = time.time()
         runtimes += [end - start]
         if i == number_of_runs - 1:
-            state = np.random.choice(states, 1)[0]  # If non-deterministic process, then random state
+            state = computed_state
     # Compute runtime confidence interval
     runtime_avg, runtime_cnf = compute_mean_conf_interval(runtimes)
     return state, runtime_avg, runtime_cnf
