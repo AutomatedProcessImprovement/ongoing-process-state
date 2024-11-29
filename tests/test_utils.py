@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from process_running_state.bpmn_model import BPMNNodeType
-from process_running_state.utils import read_bpmn_model
+from process_running_state.utils import read_bpmn_model, read_petri_net
 
 
 def test_read_bpmn_model():
@@ -60,3 +60,46 @@ def test_read_bpmn_model():
     marking = bpmn_model.simulate_execution("gateway-24", marking)[0]
     marking = bpmn_model.simulate_execution("task-26", marking)[0]
     assert marking == {"edge-27"}
+
+
+def test_read_petri_net():
+    petri_net_path = Path("./tests/assets/petri_net_test.pnml")
+    petri_net = read_petri_net(petri_net_path)
+    # Assert number of elements
+    assert len(petri_net.transitions) == 8
+    assert petri_net.id_to_transition["silent-1"].is_invisible()
+    assert len(petri_net.places) == 9
+    # Check specific transition/place names
+    assert petri_net.id_to_transition["task-10"].name == "C"
+    assert petri_net.id_to_transition["task-21"].name == "E"
+    assert petri_net.id_to_transition["task-26"].name == "G"
+    assert petri_net.id_to_place["source"].name == "source"
+    assert petri_net.id_to_place["sink"].name == "sink"
+    assert petri_net.id_to_place["ent_gateway-15"].name == "ent_gateway-15"
+    assert petri_net.id_to_place["ent_task-17"].name == "ent_task-17"
+    # Search for specific edges
+    # D
+    assert petri_net.id_to_transition["task-11"].incoming == {"exi_gateway-7"}
+    assert petri_net.id_to_transition["task-11"].outgoing == {"ent_gateway-15"}
+    # G
+    assert petri_net.id_to_transition["task-26"].incoming == {"edge-22", "edge-23"}
+    assert petri_net.id_to_transition["task-26"].outgoing == {"sink"}
+    # Place out of XOR split
+    assert petri_net.id_to_place["ent_gateway-15"].incoming == {"task-10", "task-11"}
+    assert petri_net.id_to_place["ent_gateway-15"].outgoing == {"task-21"}
+    # Check replay to ensure structure
+    marking = petri_net.initial_marking
+    assert marking == {"source"}
+    marking = petri_net.simulate_execution("task-2", marking)
+    assert marking == {"exi_gateway-7", "ent_task-12"}
+    marking = petri_net.simulate_execution("task-10", marking)
+    marking = petri_net.simulate_execution("task-21", marking)
+    assert marking == {"edge-22", "ent_task-12"}
+    marking = petri_net.simulate_execution("task-12", marking)
+    assert marking == {"edge-22", "ent_task-17"}
+    marking = petri_net.advance_marking_until_decision_point(marking)
+    assert marking == {"edge-22", "silent-1-out"}
+    marking = petri_net.simulate_execution("task-17", marking)
+    marking = petri_net.simulate_execution("task-26", marking)
+    assert marking == {"sink"}
+    assert petri_net.is_final_marking(marking)

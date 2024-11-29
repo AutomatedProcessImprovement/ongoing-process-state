@@ -1,0 +1,124 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<pnml>
+  <net id="" type="http://www.pnml.org/version-2009/grammar/pnmlcoremodel">
+    <name>
+      <text></text>
+    </name>
+    <page id="n0">
+      <place id="edge-22">
+        <name>
+          <text>edge-22</text>
+        </name>
+      </place>
+      <place id="exi_gateway-7">
+        <name>
+          <text>exi_gateway-7</text>
+        </name>
+      </place>
+      <place id="source">
+        <name>
+          <text>source</text>
+        </name>
+        <initialMarking>
+          <text>1</text>
+        </initialMarking>
+      </place>
+      <place id="edge-23">
+        <name>
+          <text>edge-23</text>
+        </name>
+      </place>
+      <place id="sink">
+        <name>
+          <text>sink</text>
+        </name>
+      </place>
+      <place id="ent_task-12">
+        <name>
+          <text>ent_task-12</text>
+        </name>
+      </place>
+      <place id="ent_gateway-15">
+        <name>
+          <text>ent_gateway-15</text>
+        </name>
+      </place>
+      <place id="ent_task-17">
+        <name>
+          <text>ent_task-17</text>
+        </name>
+      </place>
+      <place id="silent-1-out">
+        <name>
+          <text>silent-1-out</text>
+        </name>
+      </place>
+      <transition id="task-2">
+        <name>
+          <text>A</text>
+        </name>
+      </transition>
+      <transition id="task-10">
+        <name>
+          <text>C</text>
+        </name>
+      </transition>
+      <transition id="task-12">
+        <name>
+          <text>B</text>
+        </name>
+      </transition>
+      <transition id="task-26">
+        <name>
+          <text>G</text>
+        </name>
+      </transition>
+      <transition id="task-17">
+        <name>
+          <text>F</text>
+        </name>
+      </transition>
+      <transition id="task-11">
+        <name>
+          <text>D</text>
+        </name>
+      </transition>
+      <transition id="task-21">
+        <name>
+          <text>E</text>
+        </name>
+      </transition>
+      <transition id="silent-1">
+        <name>
+          <text>silent-1</text>
+        </name>
+        <toolspecific tool="ProM" version="6.4" activity="$invisible$" localNodeID="b0798350-c585-4b69-b5f0-d444fe3c3120"/>
+      </transition>
+      <arc id="1932696755728" source="task-2" target="exi_gateway-7"/>
+      <arc id="1932696756304" source="exi_gateway-7" target="task-10"/>
+      <arc id="1932696754288" source="task-10" target="ent_gateway-15"/>
+      <arc id="1932696755824" source="ent_gateway-15" target="task-21"/>
+      <arc id="1932696754864" source="task-26" target="sink"/>
+      <arc id="1932696755920" source="source" target="task-2"/>
+      <arc id="1932696753904" source="task-12" target="ent_task-17"/>
+      <arc id="1932696253023" source="ent_task-17" target="silent-1"/>
+      <arc id="1932696755440" source="task-21" target="edge-22"/>
+      <arc id="1932696565024" source="silent-1-out" target="task-17"/>
+      <arc id="1932696756016" source="exi_gateway-7" target="task-11"/>
+      <arc id="1932696564064" source="ent_task-12" target="task-12"/>
+      <arc id="1932696253024" source="silent-1" target="silent-1-out"/>
+      <arc id="1932696753040" source="task-17" target="edge-23"/>
+      <arc id="1932696754576" source="task-11" target="ent_gateway-15"/>
+      <arc id="1932696756112" source="edge-22" target="task-26"/>
+      <arc id="1932696755632" source="task-2" target="ent_task-12"/>
+      <arc id="1932696756208" source="edge-23" target="task-26"/>
+    </page>
+    <finalmarkings>
+      <marking>
+        <place idref="sink">
+          <text>1</text>
+        </place>
+      </marking>
+    </finalmarkings>
+  </net>
+</pnml>

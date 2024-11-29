@@ -3,6 +3,7 @@ from pathlib import Path
 from lxml import etree
 
 from process_running_state.bpmn_model import BPMNModel, BPMNNodeType
+from process_running_state.petri_net import PetriNet
 
 
 def read_bpmn_model(model_path: Path) -> BPMNModel:
@@ -73,5 +74,57 @@ def read_bpmn_model(model_path: Path) -> BPMNModel:
             bpmn_model.add_flow(flow_id, flow_name, source_id, target_id)
         # Return build BPMN model
         return bpmn_model
+    except etree.XMLSyntaxError as e:
+        print(f"XML Syntax Error: {e}")
+
+
+def read_petri_net(model_path: Path) -> PetriNet:
+    try:
+        # Load and parse the XML file
+        tree = etree.parse(model_path)
+        root = tree.getroot()
+        ns = {'pnml': "http://www.pnml.org/version-2009/grammar/pnmlcoremodel"}
+        # Build Petri net
+        petri_net = PetriNet()
+        # Parse places
+        for place in root.findall("net/page/place", namespaces=ns):
+            place_id = place.get("id")
+            place_name = place.find("name/text", namespaces=ns)
+            petri_net.add_place(
+                place_id=place_id,
+                place_name=place_name.text if place_name is not None else place_id
+            )
+        # Parse transitions
+        for transition in root.findall("net/page/transition", namespaces=ns):
+            transition_id = transition.get("id")
+            transition_name = transition.find("name/text", namespaces=ns)
+            toolspecific = transition.find("toolspecific", namespaces=ns)
+            is_silent = toolspecific is not None and toolspecific.get("activity") == "$invisible$"
+            petri_net.add_transition(
+                transition_id=transition_id,
+                transition_name=transition_name.text if transition_name is not None else transition_id,
+                invisible=is_silent
+            )
+        # Parse edges
+        for edge in root.findall("net/page/arc", namespaces=ns):
+            source = edge.get("source")
+            target = edge.get("target")
+            petri_net.add_edge(source_id=source, target_id=target)
+        # Initial marking
+        petri_net.initial_marking = set()
+        for place in root.findall("net/page/place", namespaces=ns):
+            if place.find("initialMarking", namespaces=ns):
+                if int(place.find("initialMarking/text", namespaces=ns).text) > 0:
+                    petri_net.initial_marking |= {place.get("id")}
+        # Final marking
+        petri_net.final_markings = []
+        for marking in root.findall("net/finalmarkings/marking", namespaces=ns):
+            new_marking = set()
+            for place in marking.findall("place", namespaces=ns):
+                if int(place.find("text", namespaces=ns).text) > 0:
+                    new_marking |= {place.get("idref")}
+            petri_net.final_markings += [new_marking]
+        # Return Petri net
+        return petri_net
     except etree.XMLSyntaxError as e:
         print(f"XML Syntax Error: {e}")

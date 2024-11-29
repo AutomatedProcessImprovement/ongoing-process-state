@@ -36,7 +36,7 @@ def _petri_net_with_AND_and_XOR() -> PetriNet:
     petri_net.add_edge("12", "13")
     petri_net.add_edge("13", "14")
     petri_net.initial_marking = {"0"}
-    petri_net.final_marking = {"14"}
+    petri_net.final_marking = [{"14"}]
     return petri_net
 
 
@@ -136,7 +136,7 @@ def _petri_net_with_XOR_within_AND() -> PetriNet:
     petri_net.add_edge("41", "42")
     petri_net.add_edge("42", "43")
     petri_net.initial_marking = {"0"}
-    petri_net.final_marking = {"43"}
+    petri_net.final_marking = [{"43"}]
     return petri_net
 
 
@@ -207,7 +207,7 @@ def _petri_net_with_AND_and_nested_XOR() -> PetriNet:
     petri_net.add_edge("27", "28")
     petri_net.add_edge("28", "29")
     petri_net.initial_marking = {"0"}
-    petri_net.final_marking = {"29"}
+    petri_net.final_marking = [{"29"}]
     return petri_net
 
 
@@ -241,7 +241,7 @@ def _petri_net_with_AND_and_nested_XOR_simple() -> PetriNet:
     petri_net.add_edge("9", "10")
     petri_net.add_edge("10", "11")
     petri_net.initial_marking = {"0"}
-    petri_net.final_marking = {"11"}
+    petri_net.final_marking = [{"11"}]
     return petri_net
 
 
@@ -280,7 +280,7 @@ def _petri_net_with_loop_inside_AND() -> PetriNet:
     petri_net.add_edge("12", "13")
     petri_net.add_edge("13", "14")
     petri_net.initial_marking = {"0"}
-    petri_net.final_marking = {"14"}
+    petri_net.final_marking = [{"14"}]
     return petri_net
 
 
@@ -379,7 +379,7 @@ def _petri_net_with_two_loops_inside_AND_followed_by_XOR_within_AND() -> PetriNe
     petri_net.add_edge("40", "41")
     petri_net.add_edge("41", "42")
     petri_net.initial_marking = {"0"}
-    petri_net.final_marking = {"42"}
+    petri_net.final_marking = [{"42"}]
     return petri_net
 
 
@@ -434,7 +434,7 @@ def _petri_net_with_two_loops_inside_AND_followed_by_XOR_within_AND_simple() -> 
     petri_net.add_edge("18", "19")
     petri_net.add_edge("19", "20")
     petri_net.initial_marking = {"0"}
-    petri_net.final_marking = {"20"}
+    petri_net.final_marking = [{"20"}]
     return petri_net
 
 
@@ -498,7 +498,7 @@ def _petri_net_with_three_loops_inside_AND_two_of_them_inside_sub_AND() -> Petri
     petri_net.add_edge("23", "24")
     petri_net.add_edge("24", "25")
     petri_net.initial_marking = {"0"}
-    petri_net.final_marking = {"25"}
+    petri_net.final_marking = [{"25"}]
     return petri_net
 
 
@@ -540,7 +540,7 @@ def _petri_net_with_loop_inside_parallel_and_loop_all_back() -> PetriNet:
     petri_net.add_edge("13", "2")
     petri_net.add_edge("14", "15")
     petri_net.initial_marking = {"0"}
-    petri_net.final_marking = {"15"}
+    petri_net.final_marking = [{"15"}]
     return petri_net
 
 
@@ -583,7 +583,7 @@ def _petri_net_with_infinite_loop() -> PetriNet:
     petri_net.add_edge("14", "15")
     petri_net.add_edge("15", "16")
     petri_net.initial_marking = {"0"}
-    petri_net.final_marking = {"16"}
+    petri_net.final_marking = [{"16"}]
     return petri_net
 
 
@@ -651,7 +651,7 @@ def _petri_net_with_infinite_loop_and_AND() -> PetriNet:
     petri_net.add_edge("25", "26")
     petri_net.add_edge("26", "27")
     petri_net.initial_marking = {"0"}
-    petri_net.final_marking = {"27"}
+    petri_net.final_marking = [{"27"}]
     return petri_net
 
 
@@ -700,5 +700,5 @@ def _petri_net_with_optional_AND_with_skipping_and_loop_branches() -> PetriNet:
     petri_net.add_edge("16", "17")
     petri_net.add_edge("17", "18")
     petri_net.initial_marking = {"0"}
-    petri_net.final_marking = {"18"}
+    petri_net.final_marking = [{"18"}]
     return petri_net

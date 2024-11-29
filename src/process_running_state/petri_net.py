@@ -45,8 +45,8 @@ class Place:
 class PetriNet:
 
     def __init__(self):
-        self.initial_marking = set()
-        self.final_marking = set()
+        self.initial_marking: Set[str] = set()
+        self.final_markings: List[Set[str]] = []
         self.transitions: Set[Transition] = set()
         self.id_to_transition: Dict[str, Transition] = dict()
         self.places: Set[Place] = set()
@@ -84,6 +84,9 @@ class PetriNet:
         # Add edge to petri net
         source.outgoing |= {target_id}
         target.incoming |= {source_id}
+
+    def is_final_marking(self, marking: Set[str]) -> bool:
+        return tuple(sorted(marking)) in [tuple(sorted(final_marking)) for final_marking in self.final_markings]
 
     def fulfills_preconditions(self) -> bool:
         """
