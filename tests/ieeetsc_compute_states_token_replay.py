@@ -8,8 +8,7 @@ from pix_framework.io.event_log import read_csv_log, DEFAULT_CSV_IDS
 from pm4py import Marking
 from scipy.stats import t
 
-from process_running_state.reachability_graph import ReachabilityGraph
-from ieeetsc_token_replay import translate_marking_to_state, custom_replay_prefix_tbr
+from ieeetsc_token_replay import custom_replay_prefix_tbr
 
 number_of_runs = 3
 log_ids = DEFAULT_CSV_IDS
@@ -33,28 +32,21 @@ def compute_current_states(
             # No noise
             ongoing_cases_csv = Path(f"../inputs/synthetic/split/{dataset}_ongoing.csv.gz")
             output_filename = Path(f"../outputs/{dataset}_ongoing_states.csv")
-            reachability_graph_path = Path(f"../outputs/{dataset}_reachability_graph.tgf")
         else:
             # With noise
             ongoing_cases_csv = Path(f"../inputs/synthetic/{noise_lvl}/{dataset}_ongoing_{noise_lvl}.csv.gz")
             output_filename = Path(f"../outputs/{dataset}_{noise_lvl}_ongoing_states.csv")
-            reachability_graph_path = Path(f"../outputs/{dataset}_{noise_lvl}_reachability_graph.tgf")
         # Read preprocessed event log(s)
         event_log_csv = read_csv_log(ongoing_cases_csv, log_ids, sort=True)
         log_size = len(event_log_csv[log_ids.case].unique())
         # Read Petri net
         pnml_model, initial_marking, final_marking = pm4py.read_pnml(pnml_model_path)
 
-        # Read reachability graph
-        print("--- Reading Reachability Graph ---\n")
-        with open(reachability_graph_path, 'r') as reachability_graph_file:
-            reachability_graph = ReachabilityGraph.from_tgf_format(reachability_graph_file.read())
-
         # Compute token-replay
         print("\n--- Computing with Token-Replay ---\n")
         total_runtime = 0
         with open(output_filename, 'a') as output_file:
-            # output_file.write("technique,case_id,state,runtime_avg,runtime_cnf\n")  # Appending to old result files
+            # output_file.write("technique,case_id,marking,runtime_avg,runtime_cnf\n")  # Appending to old result files
             i = 0
             for trace_id, events in event_log_csv.groupby(log_ids.case):
                 # Get sequence of activities
@@ -64,9 +56,7 @@ def compute_current_states(
                                                                              initial_marking, final_marking)
                 total_runtime += runtime_avg
                 # Translate for exporting
-                state = translate_marking_to_state(marking, pnml_model, reachability_graph, dataset)
-                if state is None:
-                    state = set()
+                state = {str(key) for key in marking}
                 # Output to file
                 output_file.write(f"\"token-replay\",\"{trace_id}\",\"{state}\",{runtime_avg},{runtime_cnf}\n")
                 # Keep progress counter
