@@ -1,3 +1,4 @@
+import uuid
 from itertools import combinations
 from typing import List, Set, Dict, Tuple, Optional
 
@@ -71,19 +72,36 @@ class PetriNet:
     def add_edge(self, source_id: str, target_id: str):
         # Check correctness
         if source_id in self.id_to_transition and target_id in self.id_to_transition:
-            raise RuntimeError(f"Error when adding edge '{source_id} to {target_id}' (transition to transition).")
+            raise RuntimeError(f"\nError when adding edge '{source_id} to {target_id}' (transition to transition).")
         elif source_id in self.id_to_place and target_id in self.id_to_place:
-            raise RuntimeError(f"Error when adding edge '{source_id} to {target_id}' (place to place).")
+            raise RuntimeError(f"\nError when adding edge '{source_id} to {target_id}' (place to place).")
         elif source_id not in self.id_to_transition and source_id not in self.id_to_place:
-            raise RuntimeError(f"Error when adding edge '{source_id} to {target_id}' (unknown source).")
+            raise RuntimeError(f"\nError when adding edge '{source_id} to {target_id}' (unknown source).")
         elif target_id not in self.id_to_transition and target_id not in self.id_to_place:
-            raise RuntimeError(f"Error when adding edge '{source_id} to {target_id}' (unknown target).")
+            raise RuntimeError(f"\nError when adding edge '{source_id} to {target_id}' (unknown target).")
         # Retrieve nodes
         source = self.id_to_place[source_id] if source_id in self.id_to_place else self.id_to_transition[source_id]
         target = self.id_to_place[target_id] if target_id in self.id_to_place else self.id_to_transition[target_id]
         # Add edge to petri net
         source.outgoing |= {target_id}
         target.incoming |= {source_id}
+
+    def is_mixed_decision_point(self, place: Place) -> bool:
+        """
+        Checks if the transitions connected to the given place through the outgoing edges are all invisible transitions,
+        all tasks, or mixed. Returns True if they are mixed.
+
+        :return: True if this place is connected to both invisible transitions and tasks.
+        """
+        all_invisible = all([
+            self.id_to_transition[outgoing_id].is_invisible()
+            for outgoing_id in place.outgoing
+        ])
+        all_task = all([
+            self.id_to_transition[outgoing_id].is_task()
+            for outgoing_id in place.outgoing
+        ])
+        return not all_invisible and not all_task
 
     def is_final_marking(self, marking: Set[str]) -> bool:
         return tuple(sorted(marking)) in [tuple(sorted(final_marking)) for final_marking in self.final_markings]
@@ -98,19 +116,50 @@ class PetriNet:
         fulfills = True
         # Check that all places are connected either to all invisible or all tasks
         for place in self.places:
-            if fulfills:
-                # Update flag variable for this place
-                all_invisible = all([self.id_to_transition[outgoing_id].is_invisible()
-                                     for outgoing_id in place.outgoing
-                                     ])
-                all_task = all([self.id_to_transition[outgoing_id].is_task()
-                                for outgoing_id in place.outgoing
-                                ])
-                if not all_invisible and not all_task:
-                    print(f"Error! Place '{place.id}' is connected to both invisible transitions and tasks.")
-                    fulfills = False
+            if fulfills and self.is_mixed_decision_point(place):
+                print(f"\nError! Place '{place.id}' is connected to both invisible transitions and tasks.\n"
+                      f"\tTry running petri_net.repair_mixed_decision_points() first.\n")
+                fulfills = False
         # Return result
         return fulfills
+
+    def repair_mixed_decision_points(self):
+        """
+        Repair the model for the reachability graph computation. The algorithm requires that the outgoing edges of each
+        place are either connected to tasks or invisible transitions, not both.
+
+        The repairing operation consists in, for those places not fulfilling the criteria, extending the connection
+        between the place and each task by adding an invisible transition and another place. For example, if a place
+        ("place_1") has two outgoing edges to "invisible_1" and "task_1", the edge "place_1"->"task_1" is replaced
+        by "place_1"->"invisible_2" and "invisible_2"->"task_1". In this way, the place is only connected to invisible
+        transitions, and one of them was artificially added extending the connection to the task.
+
+        This doesn't alter the result of the reachability graph because the created places are never going to be used
+        as markings in the reachability graph (only the decision points are used).
+        """
+        # Repair each of the mixed decision points
+        places_to_repair = {place for place in self.places if self.is_mixed_decision_point(place)}
+        for place in places_to_repair:
+            outgoing_tasks = [
+                outgoing_id
+                for outgoing_id in place.outgoing
+                if self.id_to_transition[outgoing_id].is_task()
+            ]
+            for task_id in outgoing_tasks:
+                # Create new place
+                new_place_id = self.new_uuid()
+                self.add_place(new_place_id, "artificial_place")
+                # Create new transition
+                new_transition_id = self.new_uuid()
+                self.add_transition(new_transition_id, "artificial_transition", invisible=True)
+                # Remove edge
+                task = self.id_to_transition[task_id]
+                place.outgoing = place.outgoing - {task_id}
+                task.incoming = task.incoming - {place.id}
+                # Add new edges
+                self.add_edge(place.id, new_transition_id)
+                self.add_edge(new_transition_id, new_place_id)
+                self.add_edge(new_place_id, task_id)
 
     def simulate_execution(self, transition_id: str, marking: Set[str]) -> Set[str]:
         """
@@ -479,6 +528,15 @@ class PetriNet:
                     marking_stack += [new_advanced_marking]
         # Return reachability graph
         return graph
+
+    def new_uuid(self) -> str:
+        # Generate UUID
+        new_id = str(uuid.uuid4())
+        # Update if it already exists in the Petri net
+        while new_id in self.id_to_transition or new_id in self.id_to_place:
+            new_id = str(uuid.uuid4())
+        # Return new UUID
+        return new_id
 
 
 def _powerset(iterable):

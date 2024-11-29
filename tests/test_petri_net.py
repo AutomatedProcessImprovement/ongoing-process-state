@@ -624,13 +624,7 @@ def test_reachability_graph_loop_inside_parallel_and_loop_all_back():
         petri_net.get_reachability_graph(cached_search=False)
         assert e_info == "Incorrect model structure! Check logged info."
     # Repair and continue with correct format
-    petri_net.add_transition("14_it", "14_incoming_transition", invisible=True)
-    petri_net.add_place("14_ip", "14_incoming_place")
-    petri_net.id_to_place["12"].outgoing = {"13"}
-    petri_net.id_to_transition["14"].incoming = set()
-    petri_net.add_edge("12", "14_it")
-    petri_net.add_edge("14_it", "14_ip")
-    petri_net.add_edge("14_ip", "14")
+    petri_net.repair_mixed_decision_points()
     reachability_graph = petri_net.get_reachability_graph(cached_search=False)
     # Assert general sizes
     assert len(reachability_graph.markings) == 6
