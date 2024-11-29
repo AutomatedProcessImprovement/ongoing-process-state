@@ -9,12 +9,12 @@ from pm4py.objects import petri
 from pm4py.objects.log.importer.xes import factory as xes_import_factory
 from scipy.stats import t
 
-from process_running_state.bpmn_model import BPMNModel
-from process_running_state.n_gram_index import NGramIndex
-from process_running_state.reachability_graph import ReachabilityGraph
-from process_running_state.utils import read_bpmn_model
 from ieeetsc_prefix_alignment import calculate_prefix_alignment_modified_a_star_with_heuristic, \
     calculate_prefix_alignment_modified_a_star_with_heuristic_without_recalculation, calculate_prefix_alignment_occ
+from process_running_state.n_gram_index import NGramIndex
+from process_running_state.petri_net import PetriNet
+from process_running_state.reachability_graph import ReachabilityGraph
+from process_running_state.utils import read_petri_net
 
 number_of_runs = 3
 log_ids = DEFAULT_CSV_IDS
@@ -63,8 +63,8 @@ def compute_current_states(
         discovery_extension: str = ""
 ):
     """
-    - Run both techniques, "our proposal" and "prefix-alignments", to compute the state of each ongoing process case.
-    - Save the results in an intermediate CSV file storing the case ID, technique, ongoing state, avg runtime
+    - Run both techniques, "n-gram index" and "prefix-alignments", to compute the state of each ongoing process case.
+    - Save the results in an intermediate CSV file storing the case ID, technique, ongoing marking, avg runtime
     - In this way, the states can be reused later to evaluate any of the RQs.
     """
     # For each dataset
@@ -73,7 +73,6 @@ def compute_current_states(
         # Instantiate paths
         if "synthetic" in dataset:
             # Synthetic dataset
-            bpmn_model_path = Path(f"../inputs/synthetic/{dataset}.bpmn")
             pnml_model_path = Path(f"../inputs/synthetic/{dataset}.pnml")
             if noise_lvl == "":
                 # No noise
@@ -89,7 +88,6 @@ def compute_current_states(
                 reachability_graph_path = Path(f"../outputs/{dataset}_{noise_lvl}_reachability_graph.tgf")
         else:
             # Real-life log
-            bpmn_model_path = Path(f"../inputs/real-life/{dataset}{discovery_extension}.bpmn")
             pnml_model_path = Path(f"../inputs/real-life/{dataset}{discovery_extension}.pnml")
             ongoing_cases_csv = Path(f"../inputs/real-life/split/{dataset}_ongoing.csv.gz")
             ongoing_cases_xes = f"../inputs/real-life/split/{dataset}_ongoing.xes.gz"
@@ -99,15 +97,15 @@ def compute_current_states(
         event_log_xes = xes_import_factory.apply(ongoing_cases_xes)
         event_log_csv = read_csv_log(ongoing_cases_csv, log_ids, sort=True)
         log_size = len(event_log_csv[log_ids.case].unique())
-        # Read proces model(s)
-        bpmn_model = read_bpmn_model(bpmn_model_path)
+        # Read proces model
+        petri_net = read_petri_net(pnml_model_path)
         pnml_model, initial_marking, final_marking = petri.importer.pnml.import_net(pnml_model_path)
 
         # Compute and export reachability graph
         print("--- Computing Reachability Graph ---\n")
-        reachability_graph, runtime_avg, runtime_cnf = compute_reachability_graph(bpmn_model)
+        reachability_graph, runtime_avg, runtime_cnf = compute_reachability_graph(petri_net)
         with open(output_filename, 'a') as output_file:
-            output_file.write("technique,case_id,state,runtime_avg,runtime_cnf\n")
+            output_file.write("technique,case_id,marking,runtime_avg,runtime_cnf\n")
             output_file.write(f"\"compute-reachability-graph\",,,{runtime_avg},{runtime_cnf}\n")
         with open(reachability_graph_path, 'w') as output_file:
             output_file.write(reachability_graph.to_tgf_format())
@@ -132,10 +130,11 @@ def compute_current_states(
                         # Trace is smaller than n_size, add trace start constant to it
                         n_gram = [NGramIndex.TRACE_START] + n_gram
                     # Estimate with n-gram index
-                    state, runtime_avg, runtime_cnf = get_state_n_gram_index(n_gram_index, n_gram)
+                    marking, runtime_avg, runtime_cnf = get_state_n_gram_index(n_gram_index, n_gram)
                     total_runtime += runtime_avg
                     # Output to file
-                    output_file.write(f"\"{n_size}-gram-index\",\"{trace_id}\",\"{state}\",{runtime_avg},{runtime_cnf}\n")
+                    output_file.write(
+                        f"\"{n_size}-gram-index\",\"{trace_id}\",\"{marking}\",{runtime_avg},{runtime_cnf}\n")
                     # Keep progress counter
                     i += 1
                     if i % 500 == 0 or i == log_size:
@@ -155,15 +154,15 @@ def compute_current_states(
                     trace_id = trace.attributes['concept:name']
                     # Estimate with prefix-alignment
                     try:
-                        state, runtime_avg, runtime_cnf = get_state_prefix_alignment(trace, pnml_model, initial_marking,
-                                                                                     final_marking, prefix_type,
-                                                                                     reachability_graph)
+                        marking, runtime_avg, runtime_cnf = get_state_prefix_alignment(trace, pnml_model,
+                                                                                       initial_marking, final_marking,
+                                                                                       prefix_type, reachability_graph)
                     except TypeError as e:
-                        state = f"Error! {str(e).replace(',', '.')}"
+                        marking = f"Error! {str(e).replace(',', '.')}"
                         runtime_avg, runtime_cnf = 0, 0
                     total_runtime += runtime_avg
                     # Output to file
-                    output_file.write(f"\"{prefix_type}\",\"{trace_id}\",\"{state}\",{runtime_avg}, {runtime_cnf}\n")
+                    output_file.write(f"\"{prefix_type}\",\"{trace_id}\",\"{marking}\",{runtime_avg}, {runtime_cnf}\n")
                     # Keep progress counter
                     i += 1
                     if i % 10 == 0 or i == log_size:
@@ -172,14 +171,14 @@ def compute_current_states(
                 output_file.write(f"\"total-runtime-{prefix_type}\",,,{total_runtime},\n")
 
 
-def compute_reachability_graph(bpmn_model: BPMNModel) -> Tuple[ReachabilityGraph, float, float]:
-    """Compute the reachability graph of the given BPMN model"""
+def compute_reachability_graph(petri_net: PetriNet) -> Tuple[ReachabilityGraph, float, float]:
+    """Compute the reachability graph of the given Petri net model"""
     runtimes = []
     final_reachability_graph = None
     # Compute state number_of_runs times
     for i in range(number_of_runs):
         start = time.time()
-        reachability_graph = bpmn_model.get_reachability_graph()
+        reachability_graph = petri_net.get_reachability_graph()
         end = time.time()
         runtimes += [end - start]
         if i == number_of_runs - 1:
@@ -193,7 +192,7 @@ def compute_n_gram_index(
         reachability_graph: ReachabilityGraph,
         n_gram_size_limit: int
 ) -> Tuple[NGramIndex, float, float]:
-    """Compute the n-gram indexing of the given BPMN model"""
+    """Compute the n-gram indexing of the given Petri net model"""
     runtimes = []
     final_n_gram_index = None
     # Compute state number_of_runs times
