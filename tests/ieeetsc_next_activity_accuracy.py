@@ -9,6 +9,11 @@ from process_running_state.petri_net import PetriNet
 from process_running_state.utils import read_petri_net
 
 log_ids = DEFAULT_CSV_IDS
+all_techniques = {
+    "3-gram-index", "4-gram-index", "5-gram-index",
+    "6-gram-index", "10-gram-index", "IAS", "IASR",
+    "OCC", "token-replay"
+}
 
 
 def next_activity_accuracy(
@@ -38,13 +43,13 @@ def next_activity_accuracy(
         # Create results file if it doesn't exist
         if not output_file_path.exists():
             with open(output_file_path, "w") as output_file:
-                output_file.write("dataset,discovery_algorithm,technique,abs_positives,rel_positives\n")
+                output_file.write("dataset,discovery_algorithm,noise_lvl,technique,abs_positives,rel_positives\n")
         # Read preprocessed event log(s) and Petri net
         remaining_cases = read_csv_log(remaining_cases_path, log_ids, sort=True)
         computed_states = pd.read_csv(computed_states_path)
         petri_net = read_petri_net(petri_net_path)
         # Go over each case ID
-        evaluated_techniques = computed_states["technique"].unique()
+        evaluated_techniques = set(computed_states["technique"].unique()) & all_techniques
         results = {technique: [] for technique in evaluated_techniques}
         for case_id, data in computed_states.groupby("case_id"):
             # Retrieve remaining activities of this case
@@ -52,14 +57,16 @@ def next_activity_accuracy(
             # Process techniques
             for technique in evaluated_techniques:
                 results[technique] += [
-                    evaluate_state_approximation(data, results[technique], remaining_case, petri_net)
+                    evaluate_state_approximation(data, technique, remaining_case, petri_net)
                 ]
         # Write stats to file
         with open(output_file_path, "a") as output_file:
             for technique in evaluated_techniques:
                 total_accuracy = sum(results[technique])
                 partial_accuracy = sum(results[technique]) / len(results[technique])
-                output_file.write(f"{dataset},{discovery_extension},{technique},{total_accuracy},{partial_accuracy}\n")
+                output_file.write(
+                    f"{dataset},{discovery_extension},{noise_lvl},{technique},{total_accuracy},{partial_accuracy}\n"
+                )
 
 
 def evaluate_state_approximation(
@@ -76,14 +83,21 @@ def evaluate_state_approximation(
     # Retrieve estimated marking
     results_technique = data[data["technique"] == technique]
     if len(results_technique) == 1:
-        estimated_state = results_technique["state"].iloc[0]
+        estimated_state = results_technique["marking"].iloc[0]
         if estimated_state.startswith("Error!"):
             is_enabled = False
         else:
             marking = ast.literal_eval(estimated_state)
-            # Check if the next activity is enabled
-            enabled_activities = [enabled_activity for enabled_activity, _ in petri_net.advance_full_marking(marking)]
-            is_enabled = next_activity in enabled_activities
+            if next_activity is None:
+                # End of trace, check marking is final
+                is_enabled = petri_net.is_final_marking(marking)
+            else:
+                # Check if the next activity is enabled
+                enabled_activities = [
+                    petri_net.id_to_transition[enabled_activity].name
+                    for enabled_activity, _ in petri_net.advance_full_marking(marking)
+                ]
+                is_enabled = next_activity in enabled_activities
     else:
         is_enabled = False
     # Return if the next activity is enabled or not
