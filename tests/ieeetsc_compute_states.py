@@ -99,6 +99,9 @@ def compute_current_states(
         log_size = len(event_log_csv[log_ids.case].unique())
         # Read proces model
         petri_net = read_petri_net(pnml_model_path)
+        if not petri_net.fulfills_preconditions():
+            print("Repairing petri net to avoid mixed decision points!!")
+            petri_net.repair_mixed_decision_points()
         pnml_model, initial_marking, final_marking = petri.importer.pnml.import_net(pnml_model_path)
 
         # Compute and export reachability graph
