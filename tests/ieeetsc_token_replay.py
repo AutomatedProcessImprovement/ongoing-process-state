@@ -1,10 +1,7 @@
-from typing import List, Set, Optional
+from typing import List
 
-import pm4py
 from pm4py.objects.log.obj import EventLog, Trace, Event
 from pm4py.objects.petri_net.obj import PetriNet, Marking
-
-from process_running_state.reachability_graph import ReachabilityGraph
 
 
 def custom_replay_prefix_tbr(
@@ -33,75 +30,3 @@ def custom_replay_prefix_tbr(
     }
     res = token_replay.apply(purpose_log, net, im, fm, parameters=parameters_tr)[0]
     return res["reached_marking"]
-
-
-places_to_flows = {
-    "synthetic_and_k3": {
-        ("p12", "p6"): {"Flow_0rajtx0"}
-    },
-    "synthetic_and_k5": {
-        ("p17", "p7", "p8"): {"Flow_1mbefht"},
-        ("p12", "p19"): {"Flow_0rajtx0"}
-    },
-    "synthetic_and_k10": {
-        ("p13", "p18", "p19", "p7", "p8"): {"Flow_1mbefht"}
-    },
-    "synthetic_and_kinf": {
-        ("XOR-loop-split", "p3"): {"Flow_1279d43", "Flow_1ujr1jr"},
-        ("XOR-loop-split", "p4"): {"Flow_0qkv9uj", "Flow_1ujr1jr"},
-        ("XOR-loop-split", "p5"): {"Flow_0jtbwl8", "Flow_1ujr1jr"},
-    },
-    "synthetic_xor_sequence": {},
-    "synthetic_xor_loop": {
-        ("XOR-join-1",): {"Flow_0a9co7f"}
-    },
-    "synthetic_nondeterministic": {
-        ("ent_Gateway_095eicu",): {"Flow_0rd259e", "Flow_086lz63"},
-        ("ent_Activity_1jm3g3j", "exi_Gateway_0d2ir9o"): {"Flow_0rd259e", "Flow_1rrleyc"},
-        ("Flow_05epthj", "exi_Gateway_0d2ir9o"): {"Flow_05epthj", "Flow_1rrleyc"},
-        ("exi_Gateway_1pz2kts",): {"Flow_14c7rtb"},
-    },
-}
-
-
-def translate_marking_to_state(
-        marking: Marking,
-        pnml_model: PetriNet,
-        reachability_graph: ReachabilityGraph,
-        dataset: str,
-) -> Optional[Set[str]]:
-    """
-    Transform a marking from a Petri net model to its corresponding state (i.e., marking) in the given reachability
-    graph. For this, it searches for the marking in the reachability graph that enables the same set of activities.
-
-    Warning! only designed for the synthetic models. Unsure how it will work in the real-life ones.
-
-    :param marking: marking to transform.
-    :param pnml_model: Petri net of the corresponding marking.
-    :param reachability_graph: reachability graph of the BPMN model to search for the equivalent state.
-    :param dataset: name of the dataset for custom translations.
-    :return: the state in the reachability graph corresponding to the given marking, if any.
-    """
-    equivalent_marking = None
-    # Get transitions enabled in the Petri net by the given marking
-    enabled_transitions = pm4py.analysis.get_enabled_transitions(pnml_model, marking)
-    enabled_activities_pnml = {
-        str(enabled_transition.label)
-        for enabled_transition in enabled_transitions
-    }
-    # Search for a marking in the reachability graph that enables the same set of activities
-    for state_id in reachability_graph.markings:
-        # Get activities enabled by current marking
-        enabled_activities_bpmn = {
-            reachability_graph.edge_to_activity[edge_id]
-            for edge_id in reachability_graph.outgoing_edges[state_id]
-        }
-        # If same activities, same marking
-        if enabled_activities_bpmn == enabled_activities_pnml:
-            equivalent_marking = reachability_graph.markings[state_id]
-    # Try custom translation dict due to silent transitions
-    if equivalent_marking is None:
-        marking_key = tuple(sorted([place.properties['place_name_tag'] for place in marking]))
-        equivalent_marking = places_to_flows[dataset].get(marking_key, None)
-    # Return equivalent marking if found
-    return equivalent_marking
