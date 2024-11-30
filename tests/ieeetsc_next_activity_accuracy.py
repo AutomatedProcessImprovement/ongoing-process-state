@@ -1,6 +1,6 @@
 import ast
 from pathlib import Path
-from typing import List
+from typing import List, Tuple, Set
 
 import pandas as pd
 from pix_framework.io.event_log import read_csv_log, DEFAULT_CSV_IDS
@@ -19,7 +19,7 @@ all_techniques = {
 def next_activity_accuracy(
         datasets: List[str],
         noise_lvl: str = "",
-        discovery_extension: str = ""
+        discovery_extension: str = "",
 ):
     # For each dataset
     for dataset in datasets:
@@ -43,29 +43,34 @@ def next_activity_accuracy(
         # Create results file if it doesn't exist
         if not output_file_path.exists():
             with open(output_file_path, "w") as output_file:
-                output_file.write("dataset,discovery_algorithm,noise_lvl,technique,abs_positives,rel_positives\n")
+                output_file.write("dataset,discovery_algorithm,noise_lvl,technique,"
+                                  "num_positives,num_reachable_positives,num_unreachable\n")
         # Read preprocessed event log(s) and Petri net
         remaining_cases = read_csv_log(remaining_cases_path, log_ids, sort=True)
         computed_states = pd.read_csv(computed_states_path)
         petri_net = read_petri_net(petri_net_path)
-        # Go over each case ID
+        # Compute reachable markings and initialize results
+        reachable_markings = petri_net.compute_reachable_markings()
         evaluated_techniques = set(computed_states["technique"].unique()) & all_techniques
         results = {technique: [] for technique in evaluated_techniques}
+        # Go over each case ID
         for case_id, data in computed_states.groupby("case_id"):
             # Retrieve remaining activities of this case
             remaining_case = remaining_cases[remaining_cases[log_ids.case] == case_id]
             # Process techniques
             for technique in evaluated_techniques:
                 results[technique] += [
-                    evaluate_state_approximation(data, technique, remaining_case, petri_net)
+                    evaluate_state_approximation(data, technique, remaining_case, petri_net, reachable_markings)
                 ]
         # Write stats to file
         with open(output_file_path, "a") as output_file:
             for technique in evaluated_techniques:
-                total_accuracy = sum(results[technique])
-                partial_accuracy = sum(results[technique]) / len(results[technique])
+                abs_positives = sum([enabled for enabled, _ in results[technique]])
+                abs_reachable_positives = sum([enabled and reachable for enabled, reachable in results[technique]])
+                abs_unreachable = sum([not reachable for _, reachable in results[technique]])
                 output_file.write(
-                    f"{dataset},{discovery_extension},{noise_lvl},{technique},{total_accuracy},{partial_accuracy}\n"
+                    f"{dataset},{discovery_extension},{noise_lvl},{technique},"
+                    f"{abs_positives},{abs_reachable_positives},{abs_unreachable}\n"
                 )
 
 
@@ -73,8 +78,9 @@ def evaluate_state_approximation(
         data: pd.DataFrame,
         technique: str,
         remaining_case: pd.DataFrame,
-        petri_net: PetriNet
-) -> bool:
+        petri_net: PetriNet,
+        reachable_markings: Set[Tuple[str]],
+) -> Tuple[bool, bool]:
     # Retrieve next activity
     if len(remaining_case) > 0:
         next_activity = remaining_case.head(1)[log_ids.activity].iloc[0]
@@ -86,8 +92,12 @@ def evaluate_state_approximation(
         estimated_state = results_technique["marking"].iloc[0]
         if estimated_state.startswith("Error!"):
             is_enabled = False
+            is_reachable = False
         else:
+            # Marking retrieved, transform to set
             marking = ast.literal_eval(estimated_state)
+            marking_key = tuple(sorted(marking))
+            is_reachable = marking_key in reachable_markings
             if next_activity is None:
                 # End of trace, check marking is final
                 is_enabled = petri_net.is_final_marking(marking)
@@ -100,8 +110,9 @@ def evaluate_state_approximation(
                 is_enabled = next_activity in enabled_activities
     else:
         is_enabled = False
+        is_reachable = False
     # Return if the next activity is enabled or not
-    return is_enabled
+    return is_enabled, is_reachable
 
 
 if __name__ == '__main__':
