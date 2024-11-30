@@ -296,6 +296,210 @@ def test_advance_full_marking_triple_loop_model():
 """
 
 
+def test_compute_reachable_markings_AND_and_XOR():
+    # Compute reachable markings
+    petri_net = _petri_net_with_AND_and_XOR()
+    reachable_markings = petri_net.compute_reachable_markings()
+    # Assert number of markings
+    assert len(reachable_markings) == 8
+    # Assert specific markings
+    assert tuple(sorted({"0"})) in reachable_markings
+    assert tuple(sorted({"2", "3"})) in reachable_markings
+    assert tuple(sorted({"2", "7"})) in reachable_markings
+    assert tuple(sorted({"3", "6"})) in reachable_markings
+    assert tuple(sorted({"6", "7"})) in reachable_markings
+    assert tuple(sorted({"9"})) in reachable_markings
+    assert tuple(sorted({"12"})) in reachable_markings
+    assert tuple(sorted({"14"})) in reachable_markings
+
+
+def test_compute_reachable_markings_XOR_within_AND():
+    # Compute reachable markings
+    petri_net = _petri_net_with_XOR_within_AND()
+    reachable_markings = petri_net.compute_reachable_markings()
+    # Assert number of markings
+    assert len(reachable_markings) == 1 + 1 + (6 * 6 * 6) + 1 + 1
+    # Assert specific markings
+    assert tuple(sorted({"0"})) in reachable_markings
+    assert tuple(sorted({"4", "5", "6"})) in reachable_markings
+    assert tuple(sorted({"4", "15", "17"})) in reachable_markings
+    assert tuple(sorted({"26", "15", "29"})) in reachable_markings
+    assert tuple(sorted({"26", "28", "30"})) in reachable_markings
+    assert tuple(sorted({"4", "38", "30"})) in reachable_markings
+    assert tuple(sorted({"14", "28", "18"})) in reachable_markings
+    assert tuple(sorted({"14", "38", "30"})) in reachable_markings
+    assert tuple(sorted({"13", "15", "29"})) in reachable_markings
+    assert tuple(sorted({"13", "28", "17"})) in reachable_markings
+    assert tuple(sorted({"37", "38", "6"})) in reachable_markings
+    assert tuple(sorted({"37", "15", "17"})) in reachable_markings
+    assert tuple(sorted({"37", "38", "39"})) in reachable_markings
+    assert tuple(sorted({"41"})) in reachable_markings
+
+
+def test_compute_reachable_markings_AND_and_nested_XOR():
+    # Compute reachable markings
+    petri_net = _petri_net_with_AND_and_nested_XOR()
+    reachable_markings = petri_net.compute_reachable_markings()
+    # Assert number of markings
+    assert len(reachable_markings) == 1 + 1 + (2 * 9) + 1 + 1
+    # Assert specific markings
+    assert tuple(sorted({"0"})) in reachable_markings
+    assert tuple(sorted({"4", "5"})) in reachable_markings
+    assert tuple(sorted({"4", "25"})) in reachable_markings
+    assert tuple(sorted({"17", "5"})) in reachable_markings
+    assert tuple(sorted({"17", "25"})) in reachable_markings
+    assert tuple(sorted({"9", "5"})) in reachable_markings
+    assert tuple(sorted({"9", "25"})) in reachable_markings
+    assert tuple(sorted({"13", "5"})) in reachable_markings
+    assert tuple(sorted({"13", "25"})) in reachable_markings
+    assert tuple(sorted({"19", "5"})) in reachable_markings
+    assert tuple(sorted({"19", "25"})) in reachable_markings
+    assert tuple(sorted({"23", "5"})) in reachable_markings
+    assert tuple(sorted({"23", "25"})) in reachable_markings
+    assert tuple(sorted({"29"})) in reachable_markings
+
+
+def test_compute_reachable_markings_loop_inside_AND():
+    # Compute reachable markings
+    petri_net = _petri_net_with_loop_inside_AND()
+    reachable_markings = petri_net.compute_reachable_markings()
+    # Assert number of markings
+    assert len(reachable_markings) == 8
+    # Assert specific markings
+    assert tuple(sorted({"0"})) in reachable_markings
+    assert tuple(sorted({"2"})) in reachable_markings
+    assert tuple(sorted({"4", "5"})) in reachable_markings
+    assert tuple(sorted({"4", "9"})) in reachable_markings
+    assert tuple(sorted({"8", "5"})) in reachable_markings
+    assert tuple(sorted({"8", "9"})) in reachable_markings
+    assert tuple(sorted({"12"})) in reachable_markings
+    assert tuple(sorted({"14"})) in reachable_markings
+
+
+def test_compute_reachable_markings_two_loops_inside_AND_followed_by_XOR_within_AND():
+    # Compute reachable markings
+    petri_net = _petri_net_with_two_loops_inside_AND_followed_by_XOR_within_AND()
+    reachable_markings = petri_net.compute_reachable_markings()
+    # Assert number of markings
+    assert len(reachable_markings) == 1 + 1 + (2 * 2) + 1 + (6 * 6) + 1 + 1
+    # Assert specific markings
+    assert tuple(sorted({"0"})) in reachable_markings
+    assert tuple(sorted({"4", "5"})) in reachable_markings
+    assert tuple(sorted({"4", "9"})) in reachable_markings
+    assert tuple(sorted({"8", "5"})) in reachable_markings
+    assert tuple(sorted({"8", "9"})) in reachable_markings
+    assert tuple(sorted({"13"})) in reachable_markings
+    assert tuple(sorted({"15", "16"})) in reachable_markings
+    assert tuple(sorted({"15", "23"})) in reachable_markings
+    assert tuple(sorted({"15", "32"})) in reachable_markings
+    assert tuple(sorted({"21", "16"})) in reachable_markings
+    assert tuple(sorted({"21", "24"})) in reachable_markings
+    assert tuple(sorted({"21", "31"})) in reachable_markings
+    assert tuple(sorted({"21", "38"})) in reachable_markings
+    assert tuple(sorted({"29", "23"})) in reachable_markings
+    assert tuple(sorted({"29", "32"})) in reachable_markings
+    assert tuple(sorted({"30", "16"})) in reachable_markings
+    assert tuple(sorted({"30", "38"})) in reachable_markings
+    assert tuple(sorted({"37", "24"})) in reachable_markings
+    assert tuple(sorted({"37", "31"})) in reachable_markings
+    assert tuple(sorted({"37", "38"})) in reachable_markings
+    assert tuple(sorted({"42"})) in reachable_markings
+
+
+def test_compute_reachable_markings_three_loops_inside_AND_two_of_them_inside_sub_AND():
+    # Compute reachable markings
+    petri_net = _petri_net_with_three_loops_inside_AND_two_of_them_inside_sub_AND()
+    reachable_markings = petri_net.compute_reachable_markings()
+    # Assert number of markings
+    assert len(reachable_markings) == 1 + (2 * 8) + 1 + 1
+    # Assert specific markings
+    assert tuple(sorted({"0"})) in reachable_markings
+    assert tuple(sorted({"2", "18"})) in reachable_markings
+    assert tuple(sorted({"2", "20"})) in reachable_markings
+    assert tuple(sorted({"4", "18"})) in reachable_markings
+    assert tuple(sorted({"6", "7", "18"})) in reachable_markings
+    assert tuple(sorted({"6", "11", "20"})) in reachable_markings
+    assert tuple(sorted({"10", "7", "20"})) in reachable_markings
+    assert tuple(sorted({"10", "11", "18"})) in reachable_markings
+    assert tuple(sorted({"15", "20"})) in reachable_markings
+    assert tuple(sorted({"17", "18"})) in reachable_markings
+    assert tuple(sorted({"25"})) in reachable_markings
+
+
+def test_compute_reachable_markings_loop_inside_parallel_and_loop_all_back():
+    # Compute reachable markings
+    petri_net = _petri_net_with_loop_inside_parallel_and_loop_all_back()
+    reachable_markings = petri_net.compute_reachable_markings()
+    # Assert number of markings
+    assert len(reachable_markings) == 8
+    # Assert specific markings
+    assert tuple(sorted({"0"})) in reachable_markings
+    assert tuple(sorted({"2"})) in reachable_markings
+    assert tuple(sorted({"4", "8"})) in reachable_markings
+    assert tuple(sorted({"4", "10"})) in reachable_markings
+    assert tuple(sorted({"6", "8"})) in reachable_markings
+    assert tuple(sorted({"6", "10"})) in reachable_markings
+    assert tuple(sorted({"12"})) in reachable_markings
+    assert tuple(sorted({"15"})) in reachable_markings
+
+
+def test_compute_reachable_markings_infinite_loop():
+    # Compute reachable markings
+    petri_net = _petri_net_with_infinite_loop()
+    reachable_markings = petri_net.compute_reachable_markings()
+    # Assert number of markings
+    assert len(reachable_markings) == 8
+    # Assert specific markings
+    assert tuple(sorted({"0"})) in reachable_markings
+    assert tuple(sorted({"2"})) in reachable_markings
+    assert tuple(sorted({"4"})) in reachable_markings
+    assert tuple(sorted({"6"})) in reachable_markings
+    assert tuple(sorted({"9"})) in reachable_markings
+    assert tuple(sorted({"11"})) in reachable_markings
+    assert tuple(sorted({"14"})) in reachable_markings
+    assert tuple(sorted({"16"})) in reachable_markings
+
+
+def test_compute_reachable_markings_infinite_loop_and_AND():
+    # Compute reachable markings
+    petri_net = _petri_net_with_infinite_loop_and_AND()
+    reachable_markings = petri_net.compute_reachable_markings()
+    # Assert number of markings
+    assert len(reachable_markings) == 1 + 1 + 1 + (3 * 3) + 1 + 1 + 1 + 1
+    # Assert specific markings
+    assert tuple(sorted({"0"})) in reachable_markings
+    assert tuple(sorted({"2"})) in reachable_markings
+    assert tuple(sorted({"6", "12"})) in reachable_markings
+    assert tuple(sorted({"6", "14"})) in reachable_markings
+    assert tuple(sorted({"6", "17"})) in reachable_markings
+    assert tuple(sorted({"8", "12"})) in reachable_markings
+    assert tuple(sorted({"8", "14"})) in reachable_markings
+    assert tuple(sorted({"8", "17"})) in reachable_markings
+    assert tuple(sorted({"11", "12"})) in reachable_markings
+    assert tuple(sorted({"11", "14"})) in reachable_markings
+    assert tuple(sorted({"11", "17"})) in reachable_markings
+    assert tuple(sorted({"22"})) in reachable_markings
+    assert tuple(sorted({"27"})) in reachable_markings
+
+
+def test_compute_reachable_markings_optional_AND_with_skipping_and_loop_branches():
+    # Compute reachable markings
+    petri_net = _petri_net_with_optional_AND_with_skipping_and_loop_branches()
+    reachable_markings = petri_net.compute_reachable_markings()
+    # Assert number of markings
+    assert len(reachable_markings) == 1 + 1 + (3 * 2) + 1 + 1
+    # Assert specific markings
+    assert tuple(sorted({"0"})) in reachable_markings
+    assert tuple(sorted({"2"})) in reachable_markings
+    assert tuple(sorted({"4", "5"})) in reachable_markings
+    assert tuple(sorted({"4", "9"})) in reachable_markings
+    assert tuple(sorted({"8", "5"})) in reachable_markings
+    assert tuple(sorted({"8", "9"})) in reachable_markings
+    assert tuple(sorted({"12", "5"})) in reachable_markings
+    assert tuple(sorted({"12", "9"})) in reachable_markings
+    assert tuple(sorted({"18"})) in reachable_markings
+
+
 def test_reachability_graph_AND_and_XOR():
     petri_net = _petri_net_with_AND_and_XOR()
     reachability_graph = petri_net.get_reachability_graph(cached_search=False)

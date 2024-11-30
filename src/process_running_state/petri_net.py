@@ -147,10 +147,10 @@ class PetriNet:
             ]
             for task_id in outgoing_tasks:
                 # Create new place
-                new_place_id = self.new_uuid()
+                new_place_id = self._new_uuid()
                 self.add_place(new_place_id, "artificial_place")
                 # Create new transition
-                new_transition_id = self.new_uuid()
+                new_transition_id = self._new_uuid()
                 self.add_transition(new_transition_id, "artificial_transition", invisible=True)
                 # Remove edge
                 task = self.id_to_transition[task_id]
@@ -529,7 +529,33 @@ class PetriNet:
         # Return reachability graph
         return graph
 
-    def new_uuid(self) -> str:
+    def compute_reachable_markings(self) -> Set[Tuple[str]]:
+        # Initialize breath-first search list
+        current_marking_stack = [self.initial_marking]
+        explored_markings = set()
+        # Run propagation until no more transitions can be fired
+        while current_marking_stack:
+            next_marking_stack = []
+            # For each marking
+            for current_marking in current_marking_stack:
+                # If it hasn't been explored
+                current_marking_key = tuple(sorted(current_marking))
+                if current_marking_key not in explored_markings:
+                    # Add it to explored
+                    explored_markings.add(current_marking_key)
+                    # Get enabled silent transitions
+                    enabled_transitions = self.get_enabled_transitions(current_marking)
+                    # Execute the transitions and save results for next iteration
+                    next_marking_stack += [
+                        self.simulate_execution(transition_id, current_marking)
+                        for transition_id in enabled_transitions
+                    ]
+            # Update new marking stack
+            current_marking_stack = next_marking_stack
+        # Return final set
+        return explored_markings
+
+    def _new_uuid(self) -> str:
         # Generate UUID
         new_id = str(uuid.uuid4())
         # Update if it already exists in the Petri net
