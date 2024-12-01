@@ -138,7 +138,9 @@ The evaluation scripts depend on two versions of PM4PY:
 5. Run the script `ieeetsc_compute_states_token_replay.py`, adding the token-based replay results to the previous result
    files.
 6. Move these files to the folder `results`.
-7. Run the script `ieeetsc_exact_state_accuracy.py`, obtaining the accuracy results in the folder `outputs`.
+7. Comment the lines in the `main()` function in `ieeetsc_next_activity_accuracy.py` that run the accuracy check for
+   real-life logs, leaving only the calls to function `next_activity_accuracy()` for the synthetic datasets.
+8. Run the script `ieeetsc_next_activity_accuracy.py`, obtaining the accuracy results in the folder `outputs`.
 
 ### Real-life Evaluation
 
@@ -148,4 +150,6 @@ The evaluation scripts depend on two versions of PM4PY:
 3. Run the script, obtaining the results with the computed states and runtimes for each proposal in the folder
    `outputs`.
 4. Move this files to the folder `results`.
-5. Run the script `ieeetsc_next_activity_accuracy.py`, obtaining the accuracy results in the folder `outputs`.
+5. Comment the lines in the `main()` function in `ieeetsc_next_activity_accuracy.py` that run the accuracy check for
+   synthetic logs, leaving only the calls to function `next_activity_accuracy()` for the real-life datasets.
+6. Run the script `ieeetsc_next_activity_accuracy.py`, obtaining the accuracy results in the folder `outputs`.
