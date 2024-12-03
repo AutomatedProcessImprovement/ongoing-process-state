@@ -234,8 +234,10 @@ def get_state_prefix_alignment(
     """Compute the state of an ongoing case with a prefix-alignment technique."""
     runtimes = []
     state = None
+    # If IAS, only run once (this technique cache pre-computations of the result, multiple runs will alter real runtime)
+    preproc_number_of_runs = 1 if alignment_type == AlignmentType.IAS else number_of_runs
     # Compute state number_of_runs times
-    for i in range(number_of_runs):
+    for i in range(preproc_number_of_runs):
         start = time.time()
         if alignment_type == AlignmentType.IASR:
             result = calculate_prefix_alignment_modified_a_star_with_heuristic(trace, pnml_model,
