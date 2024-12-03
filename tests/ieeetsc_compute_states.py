@@ -150,7 +150,7 @@ def compute_current_states(
         prefix_types = [AlignmentType.IASR, AlignmentType.IAS, AlignmentType.OCC]
         for prefix_type in prefix_types:
             print(f"- Estimating with {prefix_type} -")
-            total_runtime = 0
+            total_runtime, first_100_runtime, first_1k_runtime, first_2k_runtime = 0, 0, 0, 0
             with open(output_filename, 'a') as output_file:
                 i = 0
                 for trace in event_log_xes:
@@ -164,6 +164,12 @@ def compute_current_states(
                         marking = f"Error! {str(e).replace(',', '.')}"
                         runtime_avg, runtime_cnf = 0, 0
                     total_runtime += runtime_avg
+                    if i < 100:
+                        first_100_runtime += runtime_avg
+                    if i < 1000:
+                        first_1k_runtime += runtime_avg
+                    if i < 2000:
+                        first_2k_runtime += runtime_avg
                     # Output to file
                     output_file.write(f"\"{prefix_type}\",\"{trace_id}\",\"{marking}\",{runtime_avg}, {runtime_cnf}\n")
                     # Keep progress counter
@@ -172,6 +178,12 @@ def compute_current_states(
                         print(f"\tProcessed {i}/{log_size}")
                 # Print total runtimes
                 output_file.write(f"\"total-runtime-{prefix_type}\",,,{total_runtime},\n")
+                if i >= 100:
+                    output_file.write(f"\"first-100-runtime-{prefix_type}\",,,{first_100_runtime},\n")
+                if i >= 1000:
+                    output_file.write(f"\"first-1k-runtime-{prefix_type}\",,,{first_1k_runtime},\n")
+                if i >= 2000:
+                    output_file.write(f"\"first-2k-runtime-{prefix_type}\",,,{first_2k_runtime},\n")
 
 
 def compute_reachability_graph(petri_net: PetriNet) -> Tuple[ReachabilityGraph, float, float]:
