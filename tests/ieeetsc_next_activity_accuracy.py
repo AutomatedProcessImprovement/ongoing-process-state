@@ -48,12 +48,16 @@ def next_activity_accuracy(
         # Read preprocessed event log(s) and Petri net
         remaining_cases = read_csv_log(remaining_cases_path, log_ids, sort=True)
         computed_states = pd.read_csv(computed_states_path)
+        num_cases = len(computed_states["case_id"].unique())
         petri_net = read_petri_net(petri_net_path)
         # Compute reachable markings and initialize results
+        print("Computing all reachable markings!")
         reachable_markings = petri_net.compute_reachable_markings()
         evaluated_techniques = set(computed_states["technique"].unique()) & all_techniques
         results = {technique: [] for technique in evaluated_techniques}
         # Go over each case ID
+        print("Computing accuracy!")
+        i = 0
         for case_id, data in computed_states.groupby("case_id"):
             # Retrieve remaining activities of this case
             remaining_case = remaining_cases[remaining_cases[log_ids.case] == case_id]
@@ -62,6 +66,10 @@ def next_activity_accuracy(
                 results[technique] += [
                     evaluate_state_approximation(data, technique, remaining_case, petri_net, reachable_markings)
                 ]
+            # Report progress
+            if i % 500 == 0:
+                print(f"\tComputed {i}/{num_cases}")
+            i += 1
         # Write stats to file
         with open(output_file_path, "a") as output_file:
             for technique in evaluated_techniques:
