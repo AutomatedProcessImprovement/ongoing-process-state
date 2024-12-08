@@ -147,7 +147,8 @@ def compute_current_states(
 
         # Process prefix alignments
         print("\n--- Computing with Prefix-Alignments ---\n")
-        prefix_types = [AlignmentType.IASR, AlignmentType.IAS, AlignmentType.OCC]
+        # prefix_types = [AlignmentType.IASR, AlignmentType.IAS, AlignmentType.OCC]
+        prefix_types = [AlignmentType.IAS]
         for prefix_type in prefix_types:
             print(f"- Estimating with {prefix_type} -")
             total_runtime, first_100_runtime, first_1k_runtime, first_2k_runtime = 0, 0, 0, 0
@@ -258,7 +259,7 @@ def get_state_prefix_alignment(
         }
         end = time.time()
         runtimes += [end - start]
-        if i == number_of_runs - 1:
+        if i == preproc_number_of_runs - 1:
             state = computed_state
     # Compute runtime confidence interval
     runtime_avg, runtime_cnf = compute_mean_conf_interval(runtimes)
