@@ -113,7 +113,7 @@ def read_petri_net(model_path: Path) -> PetriNet:
         # Initial marking
         petri_net.initial_marking = set()
         for place in root.findall("net/page/place", namespaces=ns):
-            if place.find("initialMarking", namespaces=ns):
+            if place.find("initialMarking", namespaces=ns) is not None:
                 if int(place.find("initialMarking/text", namespaces=ns).text) > 0:
                     petri_net.initial_marking |= {place.get("id")}
         # Final marking
