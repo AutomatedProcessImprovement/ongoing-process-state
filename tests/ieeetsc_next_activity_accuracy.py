@@ -52,7 +52,7 @@ def next_activity_accuracy(
         # Read preprocessed event log(s), Petri net, and reachability graph
         remaining_cases = read_csv_log(remaining_cases_path, log_ids, sort=True)
         computed_states = pd.read_csv(computed_states_path)
-        num_cases = len(computed_states["case_id"].unique())
+        num_cases = len(remaining_cases["case_id"].unique())
         petri_net = read_petri_net(petri_net_path)
         with open(reach_graph_path, 'r') as reachability_graph_file:
             reachability_graph = ReachabilityGraph.from_tgf_format(reachability_graph_file.read())
