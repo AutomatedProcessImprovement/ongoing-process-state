@@ -929,6 +929,72 @@ def test_reachability_graph_optional_AND_with_skipping_and_loop_branches():
             reachability_graph.marking_to_key[tuple(sorted({"18"}))]) in edges
 
 
+def test_reachability_graph_petri_net_based_on_sepsis():
+    petri_net = _petri_net_based_on_sepsis()
+    reachability_graph = petri_net.get_reachability_graph(cached_search=False)
+    # Assert general sizes
+    assert len(reachability_graph.markings) == 16
+    assert len(reachability_graph.edges) == 32
+    # Assert size of edges per activity
+    assert len(reachability_graph.activity_to_edges["A"]) == 1
+    assert len(reachability_graph.activity_to_edges["B"]) == 4
+    assert len(reachability_graph.activity_to_edges["C"]) == 4
+    assert len(reachability_graph.activity_to_edges["D"]) == 7
+    assert len(reachability_graph.activity_to_edges["E"]) == 6
+    assert len(reachability_graph.activity_to_edges["F"]) == 6
+    assert len(reachability_graph.activity_to_edges["G"]) == 4
+    # Assert specific edges
+    edges = {reachability_graph.edges[edge_id] for edge_id in reachability_graph.activity_to_edges["A"]}
+    assert (reachability_graph.marking_to_key[tuple(sorted({"0"}))],
+            reachability_graph.marking_to_key[tuple(sorted({"2", "5", "23"}))]) in edges
+    edges = {reachability_graph.edges[edge_id] for edge_id in reachability_graph.activity_to_edges["C"]}
+    assert (reachability_graph.marking_to_key[tuple(sorted({"2", "5", "23"}))],
+            reachability_graph.marking_to_key[tuple(sorted({"2", "10", "23"}))]) in edges
+    assert (reachability_graph.marking_to_key[tuple(sorted({"4", "5", "23"}))],
+            reachability_graph.marking_to_key[tuple(sorted({"12", "18", "23"}))]) in edges
+    assert (reachability_graph.marking_to_key[tuple(sorted({"2", "5", "28"}))],
+            reachability_graph.marking_to_key[tuple(sorted({"2", "10", "28"}))]) in edges
+    assert (reachability_graph.marking_to_key[tuple(sorted({"4", "5", "28"}))],
+            reachability_graph.marking_to_key[tuple(sorted({"12", "18", "28"}))]) in edges
+    edges = {reachability_graph.edges[edge_id] for edge_id in reachability_graph.activity_to_edges["D"]}
+    assert (reachability_graph.marking_to_key[tuple(sorted({"2", "5", "23"}))],
+            reachability_graph.marking_to_key[tuple(sorted({"2", "5", "28"}))]) in edges
+    assert (reachability_graph.marking_to_key[tuple(sorted({"4", "5", "23"}))],
+            reachability_graph.marking_to_key[tuple(sorted({"4", "5", "28"}))]) in edges
+    assert (reachability_graph.marking_to_key[tuple(sorted({"2", "10", "23"}))],
+            reachability_graph.marking_to_key[tuple(sorted({"2", "10", "28"}))]) in edges
+    assert (reachability_graph.marking_to_key[tuple(sorted({"12", "18", "23"}))],
+            reachability_graph.marking_to_key[tuple(sorted({"12", "18", "28"}))]) in edges
+    assert (reachability_graph.marking_to_key[tuple(sorted({"12", "20", "23"}))],
+            reachability_graph.marking_to_key[tuple(sorted({"12", "20", "28"}))]) in edges
+    assert (reachability_graph.marking_to_key[tuple(sorted({"17", "18", "23"}))],
+            reachability_graph.marking_to_key[tuple(sorted({"17", "18", "28"}))]) in edges
+    assert (reachability_graph.marking_to_key[tuple(sorted({"22", "23"}))],
+            reachability_graph.marking_to_key[tuple(sorted({"30"}))]) in edges
+    edges = {reachability_graph.edges[edge_id] for edge_id in reachability_graph.activity_to_edges["E"]}
+    assert (reachability_graph.marking_to_key[tuple(sorted({"4", "5", "23"}))],
+            reachability_graph.marking_to_key[tuple(sorted({"17", "18", "23"}))]) in edges
+    assert (reachability_graph.marking_to_key[tuple(sorted({"4", "5", "28"}))],
+            reachability_graph.marking_to_key[tuple(sorted({"17", "18", "28"}))]) in edges
+    assert (reachability_graph.marking_to_key[tuple(sorted({"12", "18", "23"}))],
+            reachability_graph.marking_to_key[tuple(sorted({"17", "18", "23"}))]) in edges
+    assert (reachability_graph.marking_to_key[tuple(sorted({"12", "18", "28"}))],
+            reachability_graph.marking_to_key[tuple(sorted({"17", "18", "28"}))]) in edges
+    assert (reachability_graph.marking_to_key[tuple(sorted({"12", "20", "23"}))],
+            reachability_graph.marking_to_key[tuple(sorted({"22", "23"}))]) in edges
+    assert (reachability_graph.marking_to_key[tuple(sorted({"12", "20", "28"}))],
+            reachability_graph.marking_to_key[tuple(sorted({"30"}))]) in edges
+    edges = {reachability_graph.edges[edge_id] for edge_id in reachability_graph.activity_to_edges["G"]}
+    assert (reachability_graph.marking_to_key[tuple(sorted({"12", "20", "23"}))],
+            reachability_graph.marking_to_key[tuple(sorted({"32"}))]) in edges
+    assert (reachability_graph.marking_to_key[tuple(sorted({"12", "20", "28"}))],
+            reachability_graph.marking_to_key[tuple(sorted({"32"}))]) in edges
+    assert (reachability_graph.marking_to_key[tuple(sorted({"22", "23"}))],
+            reachability_graph.marking_to_key[tuple(sorted({"32"}))]) in edges
+    assert (reachability_graph.marking_to_key[tuple(sorted({"30"}))],
+            reachability_graph.marking_to_key[tuple(sorted({"32"}))]) in edges
+
+
 def test_reachability_graphs_with_cache():
     petri_net = _petri_net_with_AND_and_XOR()
     reachability_graph_no_cache = petri_net.get_reachability_graph(cached_search=False)
@@ -967,6 +1033,11 @@ def test_reachability_graphs_with_cache():
     assert reachability_graph_cache == reachability_graph_no_cache
 
     petri_net = _petri_net_with_infinite_loop()
+    reachability_graph_no_cache = petri_net.get_reachability_graph(cached_search=False)
+    reachability_graph_cache = petri_net.get_reachability_graph(cached_search=True)
+    assert reachability_graph_cache == reachability_graph_no_cache
+
+    petri_net = _petri_net_based_on_sepsis()
     reachability_graph_no_cache = petri_net.get_reachability_graph(cached_search=False)
     reachability_graph_cache = petri_net.get_reachability_graph(cached_search=True)
     assert reachability_graph_cache == reachability_graph_no_cache
