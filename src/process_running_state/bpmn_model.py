@@ -433,8 +433,8 @@ class BPMNModel:
 
     def _advance_combination(self, combination: Set[str]) -> List[Set[str]]:
         """
-        Advance a combination of branches as much as possible, executing all enabled gateways, generating all
-        combinations of advanced branches until no more gateways are enabled.
+        Advance a combination of branches, executing all enabled gateways, generating all combinations of advanced
+        branches until no more gateways are enabled (storing all markings reached during this expansion).
 
         :param combination: marking to consider as starting point to perform the advance operation.
         :return: list with the different markings result of such advancement.
@@ -464,11 +464,10 @@ class BPMNModel:
                             for node_id in self.get_enabled_nodes(current_marking) if
                             self.id_to_node[node_id].is_gateway()
                         ]
-                        # If no enabled gateways, save fully advanced marking
-                        if len(enabled_gateways) == 0:
-                            final_markings += [current_marking]
-                        else:
-                            # Otherwise, execute one of the enabled gateways and save result for next iteration
+                        # Save advanced marking
+                        final_markings += [current_marking]
+                        # Execute one of the enabled gateways and save result for next iteration
+                        if len(enabled_gateways) > 0:
                             gateway_id = enabled_gateways.pop()
                             next_marking_stack += self.simulate_execution(gateway_id, current_marking)
                 # Update new marking stack

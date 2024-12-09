@@ -435,8 +435,9 @@ class PetriNet:
 
     def _advance_combination(self, combination: Set[str]) -> List[Set[str]]:
         """
-        Advance a combination of branches as much as possible, executing all enabled silent transitions, generating all
-        combinations of advanced branches until no more silent transitions are enabled.
+        Advance a combination of branches, executing all enabled silent transitions, generating all combinations of
+        advanced branches until no more silent transitions are enabled (storing all markings reached during this
+        expansion).
 
         :param combination: marking to consider as starting point to perform the advance operation.
         :return: list with the different markings result of such advancement.
@@ -462,15 +463,13 @@ class PetriNet:
                         explored_markings.add(current_marking_key)
                         # Get enabled silent transitions
                         enabled_transitions = self.get_enabled_invisible_transitions(current_marking)
-                        # If no enabled gateways, save fully advanced marking
-                        if len(enabled_transitions) == 0:
-                            final_markings += [current_marking]
-                        else:
-                            # Otherwise, execute the enabled invisible transitions and save results for next iteration
-                            next_marking_stack += [
-                                self.simulate_execution(transition_id, current_marking)
-                                for transition_id in enabled_transitions
-                            ]
+                        # Save advanced marking
+                        final_markings += [current_marking]
+                        # Execute the enabled invisible transitions and save results for next iteration
+                        next_marking_stack += [
+                            self.simulate_execution(transition_id, current_marking)
+                            for transition_id in enabled_transitions
+                        ]
                 # Update new marking stack
                 current_marking_stack = next_marking_stack
             # Save if using cache
