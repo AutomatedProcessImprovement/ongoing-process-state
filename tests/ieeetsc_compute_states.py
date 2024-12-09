@@ -69,7 +69,7 @@ def compute_current_states(
     """
     # For each dataset
     for dataset in datasets:
-        print(f"\n\n----- Processing dataset: {dataset} -----\n")
+        print(f"\n\n----- Processing dataset: {dataset} {noise_lvl} {discovery_extension} -----\n")
         # Instantiate paths
         if "synthetic" in dataset:
             # Synthetic dataset
