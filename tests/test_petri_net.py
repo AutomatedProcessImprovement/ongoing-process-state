@@ -6,7 +6,7 @@ from test_petri_net_fixtures import _petri_net_with_AND_and_nested_XOR, _petri_n
     _petri_net_with_three_loops_inside_AND_two_of_them_inside_sub_AND, \
     _petri_net_with_loop_inside_parallel_and_loop_all_back, _petri_net_with_infinite_loop, \
     _petri_net_with_infinite_loop_and_AND, _petri_net_with_optional_AND_with_skipping_and_loop_branches, \
-    _petri_net_with_AND_and_XOR, _petri_net_with_XOR_within_AND
+    _petri_net_with_AND_and_XOR, _petri_net_with_XOR_within_AND, _petri_net_based_on_sepsis
 
 
 def test_create_petri_net():
@@ -241,6 +241,27 @@ def test_advance_full_marking_triple_loop_model():
     assert ("9", {"10", "7", "20"}) in markings
     assert ("16", {"15", "20"}) in markings
     assert ("19", {"10", "11", "18"}) in markings
+
+
+def test_advance_full_marking_petri_net_based_on_sepsis():
+    petri_net = _petri_net_based_on_sepsis()
+    # Advance from the beginning of the 3-branch parallel (only advance skippable structure to enable activity
+    markings = petri_net.advance_full_marking({"2", "5", "23"})
+    assert len(markings) == 3
+    assert ("3", {"2", "5", "23"}) in markings
+    assert ("8", {"2", "7", "23"}) in markings
+    assert ("26", {"2", "5", "25"}) in markings
+    # Advance from the beginning of the 3-branch parallel with upper branch already in AND-join
+    # - Advance skippable structure to enable C
+    # - Advance skippable structure to enable D
+    # - Skip C, traverse AND-join-split and enabling F
+    # - Skip C, traverse AND-join-split, advance skippable structure to enable E
+    markings = petri_net.advance_full_marking({"4", "5", "23"})
+    assert len(markings) == 4
+    assert ("8", {"4", "7", "23"}) in markings
+    assert ("26", {"4", "5", "25"}) in markings
+    assert ("15", {"14", "18", "23"}) in markings
+    assert ("19", {"12", "18", "23"}) in markings
 
 
 def test_compute_reachable_markings_AND_and_XOR():
