@@ -1,4 +1,5 @@
 import ast
+import random
 import re
 from pathlib import Path
 from typing import Set, List
@@ -73,7 +74,7 @@ class NGramIndex:
                 stop_search = True
             elif len(markings) > 1:
                 # More than one marking, keep first and continue expanding n-gram
-                final_marking = markings[0]
+                final_marking = random.choice(markings)
                 k += 1
             else:
                 # No marking(s) found, stop search

@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "process-running-state"
-version = "1.1.0"
-description = "Build the n-gram index of a BPMN process model to compute the state of an ongoing case in constant time."
+version = "2.0.0a"
+description = "Build the n-gram index of a BPMN/Petri net process model to compute the state of an ongoing case in constant time."
 authors = ["David Chapela de la Campa <david.chapela.delacampa@gmail.com>"]
 readme = "README.md"
 
@@ -11,6 +11,10 @@ pix-framework = "0.13.11"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.3.1"
+
+[tool.poetry.group.test.dependencies]
+# pm4py = { path = "../schuster-prefix-alignments" }
+# pm4py = "2.7.11.9"
 
 [build-system]
 requires = ["poetry-core"]

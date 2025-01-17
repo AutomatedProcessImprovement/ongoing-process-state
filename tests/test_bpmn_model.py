@@ -255,16 +255,16 @@ def test_advance_marking_until_decision_point_triple_loop_model():
 def test_advance_full_marking_triple_loop_model():
     bpmn_model = _bpmn_model_with_three_loops_inside_AND_two_of_them_inside_sub_AND()
     # Advance from initial marking: should traverse the AND-split and one XOR-join
-    marking = bpmn_model.advance_full_marking({"1"})
-    assert len(marking) == 2
-    assert ("5", {"3", "26"})
-    assert ("27", {"3", "26"})
+    markings = bpmn_model.advance_full_marking({"1"})
+    assert len(markings) == 2
+    assert ("5", {"3", "26"}) in markings
+    assert ("27", {"3", "26"}) in markings
     # Advance from state where second AND-split is enabled and lower branch is before loop: should traverse all
-    marking = bpmn_model.advance_full_marking({"7", "4"})
-    assert len(marking) == 3
-    assert ("15", {"13", "14", "26"})
-    assert ("16", {"13", "14", "26"})
-    assert ("27", {"13", "14", "26"})
+    markings = bpmn_model.advance_full_marking({"7", "4"})
+    assert len(markings) == 3
+    assert ("15", {"13", "14", "26"}) in markings
+    assert ("16", {"13", "14", "26"}) in markings
+    assert ("27", {"13", "14", "26"}) in markings
     # Advance from state where the three loop XOR-split are enabled, it should:
     # - Traverse one of them going back individually (the other two do not advance)
     # - Traverse the second one going back individually (the other two do not advance)
@@ -272,13 +272,13 @@ def test_advance_full_marking_triple_loop_model():
     # - Traverse the two that end in the same AND-join together, and the AND-join too (the other branch holds)
     markings = bpmn_model.advance_full_marking({"17", "18", "28"})
     assert len(markings) == 4
-    assert ("15", {"13", "18", "28"})
-    assert ("16", {"17", "14", "28"})
-    assert ("27", {"17", "18", "26"})
-    assert ("32", {"31", "28"})
+    assert ("15", {"13", "18", "28"}) in markings
+    assert ("16", {"17", "14", "28"}) in markings
+    assert ("27", {"17", "18", "26"}) in markings
+    assert ("32", {"31", "28"}) in markings
 
 
-def test_reachability_graph_simple():
+def test_reachability_graph_AND_and_XOR():
     bpmn_model = _bpmn_model_with_AND_and_XOR()
     reachability_graph = bpmn_model.get_reachability_graph(cached_search=False)
     # Assert general sizes
@@ -341,7 +341,7 @@ def test_reachability_graph_XOR_within_AND():
             reachability_graph.marking_to_key[tuple(sorted({"38"}))]) in edges
 
 
-def test_reachability_graph_nested_XOR():
+def test_reachability_graph_AND_nested_XOR():
     bpmn_model = _bpmn_model_with_AND_and_nested_XOR()
     reachability_graph = bpmn_model.get_reachability_graph(cached_search=False)
     # Assert general sizes
@@ -513,6 +513,11 @@ def test_reachability_graph_loop_inside_parallel_and_loop_all_back():
     # Assert general sizes
     assert len(reachability_graph.markings) == 6
     assert len(reachability_graph.edges) == 10
+    # Assert size of edges per activity
+    assert len(reachability_graph.activity_to_edges["A"]) == 1
+    assert len(reachability_graph.activity_to_edges["B"]) == 5
+    assert len(reachability_graph.activity_to_edges["C"]) == 3
+    assert len(reachability_graph.activity_to_edges["D"]) == 1
     # Assert specific edges
     edges = {reachability_graph.edges[edge_id] for edge_id in reachability_graph.activity_to_edges["A"]}
     assert (reachability_graph.marking_to_key[tuple(sorted({"1"}))],
@@ -546,6 +551,10 @@ def test_reachability_graph_infinite_loop():
     # Assert general sizes
     assert len(reachability_graph.markings) == 4
     assert len(reachability_graph.edges) == 5
+    # Assert size of edges per activity
+    assert len(reachability_graph.activity_to_edges["A"]) == 1
+    assert len(reachability_graph.activity_to_edges["B"]) == 2
+    assert len(reachability_graph.activity_to_edges["C"]) == 2
     # Assert specific edges
     edges = {reachability_graph.edges[edge_id] for edge_id in reachability_graph.activity_to_edges["A"]}
     assert (reachability_graph.marking_to_key[tuple(sorted({"1"}))],
@@ -568,6 +577,11 @@ def test_reachability_graph_infinite_loop_and_AND():
     # Assert general sizes
     assert len(reachability_graph.markings) == 6
     assert len(reachability_graph.edges) == 15
+    # Assert size of edges per activity
+    assert len(reachability_graph.activity_to_edges["A"]) == 1
+    assert len(reachability_graph.activity_to_edges["B"]) == 5
+    assert len(reachability_graph.activity_to_edges["C"]) == 5
+    assert len(reachability_graph.activity_to_edges["D"]) == 4
     # Assert specific edges
     edges = {reachability_graph.edges[edge_id] for edge_id in reachability_graph.activity_to_edges["A"]}
     assert (reachability_graph.marking_to_key[tuple(sorted({"1"}))],
@@ -600,6 +614,11 @@ def test_reachability_graph_optional_AND_with_skipping_and_loop_branches():
     # Assert general sizes
     assert len(reachability_graph.markings) == 6
     assert len(reachability_graph.edges) == 10
+    # Assert size of edges per activity
+    assert len(reachability_graph.activity_to_edges["A"]) == 1
+    assert len(reachability_graph.activity_to_edges["B"]) == 2
+    assert len(reachability_graph.activity_to_edges["C"]) == 4
+    assert len(reachability_graph.activity_to_edges["D"]) == 3
     # Assert specific edges
     edges = {reachability_graph.edges[edge_id] for edge_id in reachability_graph.activity_to_edges["A"]}
     assert (reachability_graph.marking_to_key[tuple(sorted({"1"}))],
@@ -628,50 +647,36 @@ def test_reachability_graph_simple_with_cache():
     reachability_graph_cache = bpmn_model.get_reachability_graph(cached_search=True)
     assert reachability_graph_cache == reachability_graph_no_cache
 
-
-def test_reachability_graph_XOR_within_AND_with_cache():
     bpmn_model = _bpmn_model_with_XOR_within_AND()
     reachability_graph_no_cache = bpmn_model.get_reachability_graph(cached_search=False)
     reachability_graph_cache = bpmn_model.get_reachability_graph(cached_search=True)
     assert reachability_graph_cache == reachability_graph_no_cache
 
-
-def test_reachability_graph_nested_XOR_with_cache():
     bpmn_model = _bpmn_model_with_AND_and_nested_XOR()
     reachability_graph_no_cache = bpmn_model.get_reachability_graph(cached_search=False)
     reachability_graph_cache = bpmn_model.get_reachability_graph(cached_search=True)
     assert reachability_graph_cache == reachability_graph_no_cache
 
-
-def test_reachability_graph_loop_model_with_cache():
     bpmn_model = _bpmn_model_with_loop_inside_AND()
     reachability_graph_no_cache = bpmn_model.get_reachability_graph(cached_search=False)
     reachability_graph_cache = bpmn_model.get_reachability_graph(cached_search=True)
     assert reachability_graph_cache == reachability_graph_no_cache
 
-
-def test_reachability_graph_double_loop_model_with_cache():
     bpmn_model = _bpmn_model_with_two_loops_inside_AND_followed_by_XOR_within_AND()
     reachability_graph_no_cache = bpmn_model.get_reachability_graph(cached_search=False)
     reachability_graph_cache = bpmn_model.get_reachability_graph(cached_search=True)
     assert reachability_graph_cache == reachability_graph_no_cache
 
-
-def test_reachability_graph_triple_loop_model_with_cache():
     bpmn_model = _bpmn_model_with_three_loops_inside_AND_two_of_them_inside_sub_AND()
     reachability_graph_no_cache = bpmn_model.get_reachability_graph(cached_search=False)
     reachability_graph_cache = bpmn_model.get_reachability_graph(cached_search=True)
     assert reachability_graph_cache == reachability_graph_no_cache
 
-
-def test_reachability_graph_loop_inside_parallel_and_loop_all_back_with_cache():
     bpmn_model = _bpmn_model_with_loop_inside_parallel_and_loop_all_back()
     reachability_graph_no_cache = bpmn_model.get_reachability_graph(cached_search=False)
     reachability_graph_cache = bpmn_model.get_reachability_graph(cached_search=True)
     assert reachability_graph_cache == reachability_graph_no_cache
 
-
-def test_reachability_graph_infinite_loop_with_cache():
     bpmn_model = _bpmn_model_with_infinite_loop()
     reachability_graph_no_cache = bpmn_model.get_reachability_graph(cached_search=False)
     reachability_graph_cache = bpmn_model.get_reachability_graph(cached_search=True)
