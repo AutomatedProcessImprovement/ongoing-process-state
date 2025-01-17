@@ -1,5 +1,8 @@
 # Efficient State Computation of Process Ongoing Cases
 
+![build](https://github.com/AutomatedProcessImprovement/process-running-state/actions/workflows/build.yaml/badge.svg)
+![version](https://img.shields.io/github/v/tag/AutomatedProcessImprovement/process-running-state)
+
 Approach to, given a process model in Petri net or BPMN format, compute the state of ongoing cases in constant time.
 The approach consists of, in design time, given a maximum size _n_, create an index that associates each
 _n_-gram -- i.e., execution of _n_ consecutive activities -- with the state(s) they lead to in the process model.
