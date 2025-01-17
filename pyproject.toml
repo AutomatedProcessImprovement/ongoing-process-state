@@ -12,10 +12,6 @@ pix-framework = "0.13.11"
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.3.1"
 
-[tool.poetry.group.test.dependencies]
-# pm4py = { path = "../schuster-prefix-alignments" }
-# pm4py = "2.7.11.9"
-
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
