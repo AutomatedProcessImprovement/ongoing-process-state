@@ -47,3 +47,76 @@ jobs:
       - name: Test
         run: |
           poetry run pytest
+
+  release:
+    name: Release, Python ${{ matrix.python-version }}
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    strategy:
+      matrix:
+        python-version: [ '3.11' ]
+    environment:
+      name: PyPI
+      url: https://pypi.org/p/ongoing-process-state
+    permissions:
+      id-token: write
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v3
+        with:
+          python-version: ${{ matrix.python-version }}
+          architecture: x64
+
+      - name: Install poetry
+        shell: bash
+        run: pip install poetry
+
+      - name: Install project
+        run: |
+          poetry install
+
+      - name: Build
+        run: |
+          poetry build
+
+      - name: Get version
+        id: get_version
+        run: |
+          echo "version=$(poetry version --short)" >> "$GITHUB_OUTPUT"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: ongoing-process-state-${{ steps.get_version.outputs.version }}-py${{ matrix.python-version }}
+          path: dist
+
+      - name: Generate changelog
+        run: |
+          echo "# Changelog" > CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          echo "\`\`\`" >> CHANGELOG.md
+          git log --pretty=format:"%h - %s (%an)" $(git describe --tags --abbrev=0)..HEAD >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          echo "\`\`\`" >> CHANGELOG.md
+
+      - name: Assign repository tag
+        run: |
+          git tag ${{ steps.get_version.outputs.version }}
+          git push --tags
+
+      - name: Create release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            dist/*
+          tag_name: ${{ steps.get_version.outputs.version }}
+          body_path: CHANGELOG.md
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
