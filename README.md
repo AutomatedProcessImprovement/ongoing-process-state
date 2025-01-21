@@ -1,7 +1,6 @@
 # Efficient State Computation of Process Ongoing Cases
 
 ![build](https://github.com/AutomatedProcessImprovement/ongoing-process-state/actions/workflows/build.yaml/badge.svg)
-![release](https://github.com/AutomatedProcessImprovement/ongoing-process-state/actions/workflows/release.yaml/badge.svg)
 ![version](https://img.shields.io/github/v/tag/AutomatedProcessImprovement/ongoing-process-state)
 
 Approach to, given a process model in Petri net or BPMN format, compute the state of ongoing cases in constant time.
