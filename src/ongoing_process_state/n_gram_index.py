@@ -4,7 +4,7 @@ import re
 from pathlib import Path
 from typing import Set, List
 
-from process_running_state.reachability_graph import ReachabilityGraph
+from ongoing_process_state.reachability_graph import ReachabilityGraph
 
 
 class NGramIndex:

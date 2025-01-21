@@ -2,7 +2,7 @@ from typing import List, Set, Tuple
 
 import pytest
 
-from process_running_state.reachability_graph import ReachabilityGraph
+from ongoing_process_state.reachability_graph import ReachabilityGraph
 from test_reachability_graph_fixtures import _simple_reachability_graph, _non_deterministic_reachability_graph
 
 

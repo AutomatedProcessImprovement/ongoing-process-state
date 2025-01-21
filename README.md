@@ -1,7 +1,8 @@
 # Efficient State Computation of Process Ongoing Cases
 
-![build](https://github.com/AutomatedProcessImprovement/process-running-state/actions/workflows/build.yaml/badge.svg)
-![version](https://img.shields.io/github/v/tag/AutomatedProcessImprovement/process-running-state)
+![build](https://github.com/AutomatedProcessImprovement/ongoing-process-state/actions/workflows/build.yaml/badge.svg)
+![release](https://github.com/AutomatedProcessImprovement/ongoing-process-state/actions/workflows/release.yaml/badge.svg)
+![version](https://img.shields.io/github/v/tag/AutomatedProcessImprovement/ongoing-process-state)
 
 Approach to, given a process model in Petri net or BPMN format, compute the state of ongoing cases in constant time.
 The approach consists of, in design time, given a maximum size _n_, create an index that associates each
@@ -20,7 +21,7 @@ Marlon Dumas.
 - Python v3.9.5+
 - PIP v23.0+
 - Python dependencies: all packages listed in [
-  _pyproject.toml_](https://github.com/AutomatedProcessImprovement/process-running-state/blob/main/pyproject.toml)
+  _pyproject.toml_](https://github.com/AutomatedProcessImprovement/ongoing-process-state/blob/main/pyproject.toml)
 
 ## Basic Usage
 
@@ -32,8 +33,8 @@ Then, given an instance of an N-gram index, compute the state given an _n_-gram 
 ```Python
 from pathlib import Path
 
-from process_running_state.n_gram_index import NGramIndex
-from process_running_state.utils import read_bpmn_model
+from ongoing_process_state.n_gram_index import NGramIndex
+from ongoing_process_state.utils import read_bpmn_model
 
 # Read BPMN model
 bpmn_model_path = Path("./inputs/synthetic/synthetic_and_k5.bpmn")
@@ -50,8 +51,8 @@ n_gram_index.build()
 ```Python
 from pathlib import Path
 
-from process_running_state.n_gram_index import NGramIndex
-from process_running_state.utils import read_petri_net
+from ongoing_process_state.n_gram_index import NGramIndex
+from ongoing_process_state.utils import read_petri_net
 
 # Read BPMN model
 petri_net_path = Path("./inputs/synthetic/synthetic_and_k5.bpmn")
@@ -66,7 +67,7 @@ n_gram_index.build()
 #### Compute ongoing state
 
 ```Python
-from process_running_state.n_gram_index import NGramIndex
+from ongoing_process_state.n_gram_index import NGramIndex
 
 # Compute the state of an ongoing case
 n_gram = ["B", "E", "F", "C", "G"]
@@ -83,7 +84,7 @@ The following code can be used to store/load the reachability graph in/from a fi
 ```Python
 from pathlib import Path
 
-from process_running_state.reachability_graph import ReachabilityGraph
+from ongoing_process_state.reachability_graph import ReachabilityGraph
 
 # Store reachability graph for future re-use
 reachability_graph_path = Path("./outputs/synthetic_and_k5.tgf")
@@ -100,7 +101,7 @@ work with it through files. However, we provide a simple functionality to store/
 ```Python
 from pathlib import Path
 
-from process_running_state.n_gram_index import NGramIndex
+from ongoing_process_state.n_gram_index import NGramIndex
 
 # Store n-gram index for future re-use
 n_gram_index_path = Path("./outputs/synthetic_and_k5.txt")

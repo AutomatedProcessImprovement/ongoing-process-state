@@ -1,4 +1,4 @@
-from process_running_state.petri_net import PetriNet
+from ongoing_process_state.petri_net import PetriNet
 
 
 def _petri_net_with_AND_and_XOR() -> PetriNet:

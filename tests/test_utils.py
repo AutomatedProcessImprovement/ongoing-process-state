@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from process_running_state.bpmn_model import BPMNNodeType
-from process_running_state.utils import read_bpmn_model, read_petri_net
+from ongoing_process_state.bpmn_model import BPMNNodeType
+from ongoing_process_state.utils import read_bpmn_model, read_petri_net
 
 
 def test_read_bpmn_model():

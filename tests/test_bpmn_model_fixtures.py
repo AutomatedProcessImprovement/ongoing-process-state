@@ -1,4 +1,4 @@
-from process_running_state.bpmn_model import BPMNModel, BPMNNodeType
+from ongoing_process_state.bpmn_model import BPMNModel, BPMNNodeType
 
 
 def _bpmn_model_with_AND_and_XOR() -> BPMNModel:

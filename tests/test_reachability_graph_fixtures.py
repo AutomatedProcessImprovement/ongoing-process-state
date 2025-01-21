@@ -1,4 +1,4 @@
-from process_running_state.reachability_graph import ReachabilityGraph
+from ongoing_process_state.reachability_graph import ReachabilityGraph
 
 
 def _simple_reachability_graph() -> ReachabilityGraph:

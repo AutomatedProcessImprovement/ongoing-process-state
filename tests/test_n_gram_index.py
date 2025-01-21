@@ -4,7 +4,7 @@ from typing import List, Set, Tuple
 
 import pytest
 
-from process_running_state.n_gram_index import NGramIndex
+from ongoing_process_state.n_gram_index import NGramIndex
 from test_bpmn_model_fixtures import _bpmn_model_with_loop_inside_AND, _bpmn_model_with_AND_and_nested_XOR, \
     _bpmn_model_with_XOR_within_AND, _bpmn_model_with_AND_and_XOR, \
     _bpmn_model_with_two_loops_inside_AND_followed_by_XOR_within_AND, \

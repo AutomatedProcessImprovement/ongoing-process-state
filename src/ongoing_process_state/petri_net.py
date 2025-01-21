@@ -2,7 +2,7 @@ import uuid
 from itertools import combinations
 from typing import List, Set, Dict, Tuple, Optional
 
-from process_running_state.reachability_graph import ReachabilityGraph
+from ongoing_process_state.reachability_graph import ReachabilityGraph
 
 
 class Transition:

@@ -2,8 +2,8 @@ from pathlib import Path
 
 from lxml import etree
 
-from process_running_state.bpmn_model import BPMNModel, BPMNNodeType
-from process_running_state.petri_net import PetriNet
+from ongoing_process_state.bpmn_model import BPMNModel, BPMNNodeType
+from ongoing_process_state.petri_net import PetriNet
 
 
 def read_bpmn_model(model_path: Path) -> BPMNModel:
