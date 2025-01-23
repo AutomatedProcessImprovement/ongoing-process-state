@@ -15,6 +15,14 @@ This approach has been submitted as a publication to IEEE Transactions on Servic
 Online Computation of Business Process State From Trace Prefixes via N-Gram Indexing", by David Chapela-Campa and
 Marlon Dumas.
 
+## Installation
+
+Package available in PyPI: https://pypi.org/project/ongoing-process-state/. Install it with:
+
+```bash
+pip install ongoing-process-state
+```
+
 ## Requirements
 
 - Python v3.9.5+
