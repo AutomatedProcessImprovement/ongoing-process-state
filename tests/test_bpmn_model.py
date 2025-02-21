@@ -1,3 +1,6 @@
+from pathlib import Path
+
+from ongoing_process_state.utils import read_bpmn_model
 from test_bpmn_model_fixtures import _bpmn_model_with_AND_and_XOR, _bpmn_model_with_XOR_within_AND, \
     _bpmn_model_with_AND_and_nested_XOR, _bpmn_model_with_loop_inside_AND, \
     _bpmn_model_with_two_loops_inside_AND_followed_by_XOR_within_AND, \
@@ -681,3 +684,47 @@ def test_reachability_graph_simple_with_cache():
     reachability_graph_no_cache = bpmn_model.get_reachability_graph(cached_search=False)
     reachability_graph_cache = bpmn_model.get_reachability_graph(cached_search=True)
     assert reachability_graph_cache == reachability_graph_no_cache
+
+
+def test_consider_events_as_tasks():
+    bpmn_model_path = Path("./tests/assets/bpmn_model_timers_example.bpmn")
+    bpmn_model = read_bpmn_model(bpmn_model_path)
+    # Generate reachability graph treating events as tasks
+    reachability_graph = bpmn_model.get_reachability_graph(treat_event_as_task=True)
+    # Assert expected edges with event as label
+    assert 'pre-B timer' in reachability_graph.activity_to_edges
+    assert len(reachability_graph.activity_to_edges['pre-B timer']) == 1
+    assert 'post-B timer' in reachability_graph.activity_to_edges
+    assert len(reachability_graph.activity_to_edges['post-B timer']) == 1
+    # Assert their execution moves from the correct marking to the expected one
+    edge_id = list(reachability_graph.activity_to_edges['pre-B timer'])[0]
+    source_marking = reachability_graph.markings[reachability_graph.edges[edge_id][0]]
+    target_marking = reachability_graph.markings[reachability_graph.edges[edge_id][1]]
+    assert source_marking == {"id_1"}
+    assert target_marking == {"id_3"}
+    edge_id = list(reachability_graph.activity_to_edges['post-B timer'])[0]
+    source_marking = reachability_graph.markings[reachability_graph.edges[edge_id][0]]
+    target_marking = reachability_graph.markings[reachability_graph.edges[edge_id][1]]
+    assert source_marking == {"id_4"}
+    assert target_marking == {"id_5"}
+
+
+def test_consider_events_as_decision_points():
+    bpmn_model_path = Path("./tests/assets/bpmn_model_timers_example.bpmn")
+    bpmn_model = read_bpmn_model(bpmn_model_path)
+    # Generate reachability graph treating events as decision points
+    reachability_graph = bpmn_model.get_reachability_graph(treat_event_as_task=False)
+    # Assert expected edges with event as label
+    assert 'pre-B timer' not in reachability_graph.activity_to_edges
+    assert 'post-B timer' not in reachability_graph.activity_to_edges
+    # Assert other edges execution moves from the correct marking to the expected one
+    edge_id = list(reachability_graph.activity_to_edges['B'])[0]
+    source_marking = reachability_graph.markings[reachability_graph.edges[edge_id][0]]
+    target_marking = reachability_graph.markings[reachability_graph.edges[edge_id][1]]
+    assert source_marking == {"id_1"}
+    assert target_marking == {"id_4"}
+    edge_id = list(reachability_graph.activity_to_edges['C'])[0]
+    source_marking = reachability_graph.markings[reachability_graph.edges[edge_id][0]]
+    target_marking = reachability_graph.markings[reachability_graph.edges[edge_id][1]]
+    assert source_marking == {"id_4"}
+    assert target_marking == {"id_14"}
