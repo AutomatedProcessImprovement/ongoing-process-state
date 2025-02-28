@@ -261,7 +261,7 @@ class BPMNModel:
             self,
             marking: Set[str],
             explored_markings: Optional[Set[Tuple[str]]] = None,
-            treat_event_as_task: bool = False
+            treat_event_as_task: bool = False,
     ) -> List[Tuple[str, Set[str]]]:
         """
         Advance the current marking as much as possible without executing any task, i.e., execute gateways until there
@@ -272,10 +272,11 @@ class BPMNModel:
 
         :param marking: marking to consider as starting point to perform the advance operation.
         :param explored_markings: if recursive call, set of previously explored markings to avoid infinite loop.
-        :param treat_event_as_task: if 'True', intermediate events are treated as tasks. This means there are edges
-        in the reachability graph representing the execution of these events, and they are expected to be part of the
-        n-gram. If 'False', intermediate events are considered as decision points, meaning that they would be traversed
-        when necessary, without needing to be part of the n-gram.
+        :param treat_event_as_task: if 'True', (intermediate) events are treated as tasks and, thus, the result will
+        contain IDs of enabled events as first element of the tuples (if any), and the advancement won't go through
+        events. If 'False', they are considered as decision points, i.e., they will be traversed in order to enable
+        other elements, but if the traversal of that branch was not needed, the returned marking will be prior to the
+        event.
 
         :return: list of tuples with the ID of an enabled task/event as first element and the advanced marking that
         enabled it as second element.
@@ -285,11 +286,20 @@ class BPMNModel:
         # First advance all branches at the same time until tasks, events, or decision points (XOR-split/OR-split)
         advanced_marking = self.advance_marking_until_decision_point(marking)
         # Advance all branches together (getting all combinations of advancements)
-        tuples_fully_advanced_markings = self._advance_marking(advanced_marking, explored_markings, treat_event_as_task)
+        tuples_fully_advanced_markings = self._advance_marking(
+            marking=advanced_marking,
+            explored_markings=explored_markings,
+            treat_event_as_task=treat_event_as_task,
+        )
         # Save only advanced marking that enabled new tasks/events
         for enabled_node_id, fully_advanced_marking in tuples_fully_advanced_markings:
             # Try to rollback the advancements in other branches as much as possible
-            rollbacked_marking = self._try_rollback(fully_advanced_marking, advanced_marking, enabled_node_id)
+            rollbacked_marking = self._try_rollback(
+                advanced_marking=fully_advanced_marking,
+                marking=advanced_marking,
+                enabled_node_id=enabled_node_id,
+                treat_event_as_task=treat_event_as_task,
+            )
             # Save rollbacked marking
             tuples_final_markings |= {(enabled_node_id, tuple(sorted(rollbacked_marking)))}
         # Return final markings (if none of them enabled any new tasks/events return original marking)
@@ -299,7 +309,7 @@ class BPMNModel:
             self,
             marking: Set[str],
             explored_markings: Optional[Set[Tuple[str]]] = None,
-            treat_event_as_task: bool = False
+            treat_event_as_task: bool = False,
     ) -> List[Tuple[str, Set[str]]]:
         """
         Advance the current marking as much as possible without executing any task, i.e., execute gateways until there
@@ -311,10 +321,8 @@ class BPMNModel:
 
         :param marking: marking to consider as starting point to perform the advance operation.
         :param explored_markings: if recursive call, set of previously explored markings to avoid infinite loop.
-        :param treat_event_as_task: if 'True', intermediate events are treated as tasks. This means there are edges
-        in the reachability graph representing the execution of these events, and they are expected to be part of the
-        n-gram. If 'False', intermediate events are considered as decision points, meaning that they would be traversed
-        when necessary, without needing to be part of the n-gram.
+        :param treat_event_as_task: if 'True', treat intermediate events as tasks. If 'False', traverse them as decision
+        points.
 
         :return: list of tuples with the ID of the enabled task/event as first element, and the advanced marking that
         enabled it as second element.
@@ -344,7 +352,7 @@ class BPMNModel:
                             for node_id in self.get_enabled_nodes(current_marking)
                             # Retain gateways, and events if they are not treated as tasks
                             if (self.id_to_node[node_id].is_gateway() or
-                                (not treat_event_as_task and self.id_to_node[node_id].is_event()))
+                                (not treat_event_as_task and self.id_to_node[node_id].is_intermediate_event()))
                         ]
                         # If no enabled gateways (or events), save fully advanced marking
                         if len(enabled_gateways) == 0:
@@ -365,7 +373,11 @@ class BPMNModel:
                                     set_tuples_final_markings |= {
                                         (enabled_node_id, tuple(sorted(fully_advanced_marking)))
                                         for enabled_node_id, fully_advanced_marking
-                                        in self.advance_full_marking(advanced_marking, explored_markings)
+                                        in self.advance_full_marking(
+                                            marking=advanced_marking,
+                                            explored_markings=explored_markings,
+                                            treat_event_as_task=treat_event_as_task,
+                                        )
                                     }
                             else:
                                 # JOINs or XOR-split (or event), execute and continue with advancement
@@ -383,7 +395,13 @@ class BPMNModel:
         # Return final set
         return tuples_final_markings
 
-    def _try_rollback(self, advanced_marking: Set[str], marking: Set[str], enabled_node_id: str) -> Set[str]:
+    def _try_rollback(
+            self,
+            advanced_marking: Set[str],
+            marking: Set[str],
+            enabled_node_id: str,
+            treat_event_as_task: bool = False,
+    ) -> Set[str]:
         """
         Given an advanced marking and the node for which it advanced, try to rollback the advancement of as much
         branches as possible while keeping the node enabled. In this way, the marking still enables the desired node,
@@ -402,6 +420,8 @@ class BPMNModel:
         :param advanced_marking: advanced marking result of advancing the branches in [marking] as much as possible.
         :param marking: marking considered as starting point.
         :param enabled_node_id: identifier of the node that is enabled and must remain enabled.
+        :param treat_event_as_task: if 'True', treat intermediate events as tasks. If 'False', traverse them as decision
+        points.
 
         :return: rollbacked marking.
         """
@@ -423,7 +443,11 @@ class BPMNModel:
         for branch_combination in branch_combinations:
             if not found:
                 # Advance with this branch combination
-                for advanced_marking_with_branch_combination in self._advance_combination(branch_combination):
+                advanced_markings_with_branch_combination = self._advance_combination(
+                    combination=branch_combination,
+                    treat_event_as_task=treat_event_as_task,
+                )
+                for advanced_marking_with_branch_combination in advanced_markings_with_branch_combination:
                     # If the advancement reached the enabling flow
                     reached_enabling_flow = enabling_flow_id in advanced_marking_with_branch_combination
                     # and the advanced marking with these branch combination is all in the advanced marking
@@ -436,7 +460,11 @@ class BPMNModel:
         other_branches = marking - advanced_combination
         rollbacked = False
         if len(other_branches) > 0:
-            for advanced_marking_other_branches in self._advance_combination(other_branches):
+            advanced_markings_other_branches = self._advance_combination(
+                combination=other_branches,
+                treat_event_as_task=treat_event_as_task,
+            )
+            for advanced_marking_other_branches in advanced_markings_other_branches:
                 if not rollbacked and advanced_marking_other_branches <= advanced_marking:
                     # This advancement is independent of the current branch, rollback it
                     rollbacked = True
@@ -449,12 +477,14 @@ class BPMNModel:
         # Return final markings
         return rollbacked_marking
 
-    def _advance_combination(self, combination: Set[str]) -> List[Set[str]]:
+    def _advance_combination(self, combination: Set[str], treat_event_as_task: bool = False) -> List[Set[str]]:
         """
         Advance a combination of branches, executing all enabled gateways, generating all combinations of advanced
         branches until no more gateways are enabled (storing all markings reached during this expansion).
 
         :param combination: marking to consider as starting point to perform the advance operation.
+        :param treat_event_as_task: if 'True', only advance through enabled gateways. If 'False', advance through
+        intermediate events as well.
 
         :return: list with the different markings result of such advancement.
         """
@@ -477,11 +507,12 @@ class BPMNModel:
                     if current_marking_key not in explored_markings:
                         # Add it to explored
                         explored_markings.add(current_marking_key)
-                        # Get enabled gateways
+                        # Get enabled gateways (or events if needed)
                         enabled_gateways = [
                             node_id
-                            for node_id in self.get_enabled_nodes(current_marking) if
-                            self.id_to_node[node_id].is_gateway()
+                            for node_id in self.get_enabled_nodes(current_marking)
+                            if (self.id_to_node[node_id].is_gateway() or
+                                (not treat_event_as_task and self.id_to_node[node_id].is_intermediate_event()))
                         ]
                         # Save advanced marking
                         final_markings += [current_marking]
@@ -538,8 +569,8 @@ class BPMNModel:
                 #   An activity enabled by the advancement
                 #   The advanced marking needed to execute the activity
                 tuples_advanced_markings = self.advance_full_marking(
-                    current_marking,
-                    treat_event_as_task=treat_event_as_task
+                    marking=current_marking,
+                    treat_event_as_task=treat_event_as_task,
                 )
                 # For each pair of enabled activity and advanced marking that enables it
                 for enabled_node_id, advanced_marking in tuples_advanced_markings:
