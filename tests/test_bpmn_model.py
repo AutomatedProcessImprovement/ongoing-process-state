@@ -728,3 +728,18 @@ def test_consider_events_as_decision_points():
     target_marking = reachability_graph.markings[reachability_graph.edges[edge_id][1]]
     assert source_marking == {"id_4"}
     assert target_marking == {"id_14"}
+    edge_ids = list(reachability_graph.activity_to_edges['F'])
+    assert len(edge_ids) == 2
+    source_marking_1 = reachability_graph.markings[reachability_graph.edges[edge_ids[0]][0]]
+    target_marking_1 = reachability_graph.markings[reachability_graph.edges[edge_ids[0]][1]]
+    source_marking_2 = reachability_graph.markings[reachability_graph.edges[edge_ids[1]][0]]
+    target_marking_2 = reachability_graph.markings[reachability_graph.edges[edge_ids[1]][1]]
+    assert source_marking_1 in [{"id_9", "id_10"}, {"id_11", "id_10"}]
+    assert source_marking_2 in [{"id_9", "id_10"}, {"id_11", "id_10"}]
+    assert target_marking_1 in [{"id_9", "id_12"}, {"id_14"}]
+    assert target_marking_2 in [{"id_9", "id_12"}, {"id_14"}]
+    # Assert all post-timer flows are not in any marking
+    all_marking_elements = {element for marking in reachability_graph.markings.values() for element in marking}
+    assert "id_3" not in all_marking_elements
+    assert "id_5" not in all_marking_elements
+    assert "id_16" not in all_marking_elements

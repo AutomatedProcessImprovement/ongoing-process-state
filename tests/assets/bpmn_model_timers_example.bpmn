@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<bpmn:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_1840iqd" targetNamespace="http://bpmn.io/schema/bpmn" exporter="bpmn-js (https://demo.bpmn.io)" exporterVersion="18.1.1">
+<bpmn:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_1840iqd" targetNamespace="http://bpmn.io/schema/bpmn" exporter="bpmn-js (https://demo.bpmn.io)" exporterVersion="18.3.1">
   <bpmn:process id="Process_1qv1kmw" isExecutable="false">
     <bpmn:startEvent id="id_StartEvent" name="Start">
       <bpmn:outgoing>id_0</bpmn:outgoing>
@@ -50,10 +50,10 @@
     </bpmn:task>
     <bpmn:sequenceFlow id="id_9" name="9" sourceRef="Gateway_0z2t7cw" targetRef="id_E" />
     <bpmn:task id="id_F" name="F">
-      <bpmn:incoming>id_10</bpmn:incoming>
+      <bpmn:incoming>id_16</bpmn:incoming>
       <bpmn:outgoing>id_12</bpmn:outgoing>
     </bpmn:task>
-    <bpmn:sequenceFlow id="id_10" name="10" sourceRef="Gateway_0z2t7cw" targetRef="id_F" />
+    <bpmn:sequenceFlow id="id_10" name="10" sourceRef="Gateway_0z2t7cw" targetRef="id_preF" />
     <bpmn:sequenceFlow id="id_11" name="11" sourceRef="id_E" targetRef="Gateway_1wpnz6e" />
     <bpmn:parallelGateway id="Gateway_1wpnz6e">
       <bpmn:incoming>id_11</bpmn:incoming>
@@ -80,6 +80,12 @@
       <bpmn:incoming>id_2</bpmn:incoming>
       <bpmn:outgoing>id_3</bpmn:outgoing>
       <bpmn:timerEventDefinition id="TimerEventDefinition_0e6ud8w" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:sequenceFlow id="id_16" name="16" sourceRef="id_preF" targetRef="id_F" />
+    <bpmn:intermediateCatchEvent id="id_preF" name="pre-F-timer">
+      <bpmn:incoming>id_10</bpmn:incoming>
+      <bpmn:outgoing>id_16</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerEventDefinition_1lfr9eq" />
     </bpmn:intermediateCatchEvent>
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
@@ -115,14 +121,6 @@
       <bpmndi:BPMNShape id="Gateway_09le182_di" bpmnElement="Gateway_0z2t7cw">
         <dc:Bounds x="705" y="315" width="50" height="50" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="id_E_di" bpmnElement="id_E">
-        <dc:Bounds x="830" y="220" width="100" height="80" />
-        <bpmndi:BPMNLabel />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="id_F_di" bpmnElement="id_F">
-        <dc:Bounds x="830" y="390" width="100" height="80" />
-        <bpmndi:BPMNLabel />
-      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Gateway_1qrlmql_di" bpmnElement="Gateway_1wpnz6e">
         <dc:Bounds x="1005" y="315" width="50" height="50" />
       </bpmndi:BPMNShape>
@@ -147,6 +145,20 @@
         <bpmndi:BPMNLabel>
           <dc:Bounds x="552" y="145" width="56" height="14" />
         </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1wqjzmi_di" bpmnElement="id_preF">
+        <dc:Bounds x="752" y="412" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="742" y="455" width="56" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="id_F_di" bpmnElement="id_F">
+        <dc:Bounds x="860" y="390" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="id_E_di" bpmnElement="id_E">
+        <dc:Bounds x="860" y="220" width="100" height="80" />
+        <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="id_0_di" bpmnElement="id_0">
         <di:waypoint x="188" y="220" />
@@ -217,7 +229,7 @@
       <bpmndi:BPMNEdge id="id_9_di" bpmnElement="id_9">
         <di:waypoint x="730" y="315" />
         <di:waypoint x="730" y="260" />
-        <di:waypoint x="830" y="260" />
+        <di:waypoint x="860" y="260" />
         <bpmndi:BPMNLabel>
           <dc:Bounds x="742" y="285" width="7" height="14" />
         </bpmndi:BPMNLabel>
@@ -225,25 +237,25 @@
       <bpmndi:BPMNEdge id="id_10_di" bpmnElement="id_10">
         <di:waypoint x="730" y="365" />
         <di:waypoint x="730" y="430" />
-        <di:waypoint x="830" y="430" />
+        <di:waypoint x="752" y="430" />
         <bpmndi:BPMNLabel>
           <dc:Bounds x="739" y="395" width="13" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="id_11_di" bpmnElement="id_11">
-        <di:waypoint x="930" y="260" />
+        <di:waypoint x="960" y="260" />
         <di:waypoint x="1030" y="260" />
         <di:waypoint x="1030" y="315" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="974" y="242" width="12" height="14" />
+          <dc:Bounds x="989" y="242" width="12" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="id_12_di" bpmnElement="id_12">
-        <di:waypoint x="930" y="430" />
+        <di:waypoint x="960" y="430" />
         <di:waypoint x="1030" y="430" />
         <di:waypoint x="1030" y="365" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="974" y="412" width="13" height="14" />
+          <dc:Bounds x="989" y="412" width="13" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="id_13_di" bpmnElement="id_13">
@@ -266,6 +278,13 @@
         <di:waypoint x="1402" y="250" />
         <bpmndi:BPMNLabel>
           <dc:Bounds x="1365" y="232" width="13" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="id_16_di" bpmnElement="id_16">
+        <di:waypoint x="788" y="430" />
+        <di:waypoint x="860" y="430" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="813" y="412" width="13" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
