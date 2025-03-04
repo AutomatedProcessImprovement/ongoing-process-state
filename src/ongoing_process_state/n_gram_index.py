@@ -59,7 +59,11 @@ class NGramIndex:
         :return: the marking corresponding to the state of the case given the last N activities.
         """
         # Filter out nonexistent (in the reachability graph) activities
-        n_gram = [label for label in n_gram if label in self.graph.activity_to_edges]
+        n_gram = [
+            label
+            for label in n_gram
+            if label in self.graph.activity_to_edges or label == NGramIndex.TRACE_START
+        ]
         # Initialize estimated marking to initial marking (if no other marking found, that's default)
         final_marking = self.get_marking_state([NGramIndex.TRACE_START])[0]
         stop_search = False

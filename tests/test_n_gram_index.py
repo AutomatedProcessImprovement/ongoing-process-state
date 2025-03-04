@@ -323,13 +323,12 @@ def test_get_best_marking_state_for():
     assert n_gram_index.get_best_marking_state_for(["D", "A", "D"]) == {"13", "14", "28"}
     # Assert n-grams that don't get deterministic even with the complete n-gram
     assert n_gram_index.get_best_marking_state_for(["C", "D"]) in [{"13", "18", "28"}, {"17", "18", "28"}]
-    assert n_gram_index.get_best_marking_state_for(["A", "C", "D"]) in [{"13", "18", "28"}, {"17", "18", "28"}]
+    assert n_gram_index.get_best_marking_state_for([NGramIndex.TRACE_START, "A", "C", "D"]) in [{"13", "18", "28"},
+                                                                                                {"17", "18", "28"}]
     assert n_gram_index.get_best_marking_state_for(["B", "B", "B"]) in [{"17", "14", "26"}, {"17", "14", "28"},
+                                                                        {"17", "18", "26"}, {"17", "18", "28"}]
+    assert n_gram_index.get_best_marking_state_for(["C", "B", "B", "B"]) in [{"17", "14", "26"}, {"17", "14", "28"},
                                                                              {"17", "18", "26"}, {"17", "18", "28"}]
-    assert n_gram_index.get_best_marking_state_for(["C", "B", "B", "B"]) in [{"17", "14", "26"},
-                                                                                  {"17", "14", "28"},
-                                                                                  {"17", "18", "26"},
-                                                                                  {"17", "18", "28"}]
 
 
 def test_input_output_simple(temp_file_path):

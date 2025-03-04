@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ongoing-process-state"
-version = "2.1.1"
+version = "2.1.2"
 description = "Build the n-gram index of a BPMN/Petri net process model to compute the state of an ongoing case in constant time."
 authors = ["David Chapela de la Campa <david.chapela.delacampa@gmail.com>"]
 readme = "README.md"
